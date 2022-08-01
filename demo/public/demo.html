@@ -27,8 +27,10 @@
         </select>
         <!-- <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" /> -->
         <!-- <input id="address" type="text" style="width: 300px;"value="https://flv.bdplay.nodemedia.cn/live/bbb_265.flv" /> -->
-        <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" />
-        <!-- <input id="address" type="text" style="width: 300px;"value="http://127.0.0.1:8080/live/a123456.flv" /> -->
+        <!-- <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" /> -->
+        <!-- <input id="address" type="text" style="width: 300px;"value="http://192.168.6.18:8080/live/a123456.flv" /> -->
+        <input id="address" type="text" style="width: 300px;"value="http://172.105.18.200:2080/live/test121.live.flv" />
+
         <button id="play" type="button">播放</button>
         <button id="stop" type="button">停止</button>
     </div>
@@ -72,7 +74,7 @@ function main() {
        let options = {
             container: $container,
             url:addrinput.value,
-            delay:500,
+            delay:3000,
             width:960,
             height:540,
             renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value,
