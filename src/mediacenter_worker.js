@@ -329,11 +329,15 @@ function loadAll() {
 
         yuvData(yuv, timestamp) {
 
-            if (timestamp - this._lastts > 10000000) {
+        //    this._logger.info('MediaCenterInternal', `yuvdata timestamp ${timestamp}`);
+
+            if (timestamp - this._lastts > 0x7FFFFFFF) {
 
                 this._logger.info('MediaCenterInternal', `yuvdata timestamp error ${timestamp} last ${this._lastts}`);
                 return;
             }
+
+         //   this._logger.info('MediaCenterInternal', `yuvdata timestamp${timestamp}`);
 
             this._lastts = timestamp;
 
@@ -361,12 +365,16 @@ function loadAll() {
 
         pcmData(pcmDataArray, samples, timestamp) {
 
+       //     this._logger.info('MediaCenterInternal', `pcmData samples ${samples} timestamp${timestamp}`);
 
-            if (timestamp - this._lastts > 10000000) {
+
+            if (timestamp - this._lastts > 0x7FFFFFFF) {
 
                 this._logger.info('MediaCenterInternal', `pcmData timestamp error ${timestamp} last ${this._lastts}`);
                 return;
             }
+
+           // this._logger.info('MediaCenterInternal', `pcmData samples ${samples} timestamp${timestamp}`);
 
             this._lastts = timestamp;
 
@@ -380,7 +388,7 @@ function loadAll() {
                 var fp = Module.HEAPU32[(pcmDataArray >> 2) + i] >> 2;
                 datas.push(Float32Array.of(...Module.HEAPF32.subarray(fp, fp + samples)));
 
-            this._yuvbitrate += datas[i].length*4;
+                this._pcmbitrate += datas[i].length*4;
             }
 
 
