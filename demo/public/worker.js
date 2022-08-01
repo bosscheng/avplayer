@@ -1104,7 +1104,7 @@
         this._stream.start();
 
         this._timer = setInterval(() => {
-          let cnt = Math.min(20, this._gop.length);
+          let cnt = Math.min(30, this._gop.length);
 
           while (cnt > 0) {
             this.handleTicket();
@@ -1113,7 +1113,7 @@
         }, 10);
         this._stattimer = setInterval(() => {
           this._logger.info('MCSTAT', `------ MCSTAT ---------
-            video gen framerate:${this._vframerate / this._statsec} bitrate:${this._vbitrate * 8 / this._statsec}
+            video gen framerate:${this._vframerate / this._statsec} bitrate:${this._vbitrate * 8 / this._statsec / 1024 / 1024}M
             audio gen framerate:${this._aframerate / this._statsec} bitrate:${this._abitrate * 8 / this._statsec}
             yuv   gen framerate:${this._yuvframerate / this._statsec} bitrate:${this._yuvbitrate * 8 / this._statsec}
             pcm   gen framerate:${this._pcmframerate / this._statsec} bitrate:${this._pcmbitrate * 8 / this._statsec}
@@ -6907,7 +6907,7 @@
       return (Module["dynCall_jiji"] = Module["asm"]["U"]).apply(null, arguments);
     };
 
-    Module["_ff_h264_cabac_tables"] = 267173;
+    Module["_ff_h264_cabac_tables"] = 284421;
 
     var calledRun;
 
@@ -12469,7 +12469,7 @@
       return (Module["dynCall_jiji"] = Module["asm"]["T"]).apply(null, arguments);
     };
 
-    Module["_ff_h264_cabac_tables"] = 117829;
+    Module["_ff_h264_cabac_tables"] = 135077;
 
     var calledRun;
 

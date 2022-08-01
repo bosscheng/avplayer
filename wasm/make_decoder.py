@@ -23,7 +23,7 @@ emcc_args = [
     '--memory-init-file', '0',
     # '--closure', '1',
     # '--llvm-lto','1',
-    '--bind',
+    '-lembind',
     '-I.', '-Ithirdparty/ffmpeg/include',
     '--post-js','./post.js'
 ]+["-s "+k+"="+str(v) for k, v in sargs.items()]

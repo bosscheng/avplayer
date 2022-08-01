@@ -24,7 +24,7 @@ emcc_args = [
     '--memory-init-file', '0',
     # '--closure', '1',
     # '--llvm-lto','1',
-    '--bind',
+    '-lembind',
     '-I.', '-Ithirdparty/android', '-Ithirdparty/android/include', '-Ithirdparty/ffmpeg/include',
     '--post-js','./post.js',
     '-msimd128'
