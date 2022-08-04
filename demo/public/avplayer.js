@@ -2502,9 +2502,15 @@ void main(void) {
 
         this._player._logger.info('mediacenter', `start worker thread ${player._options.decoder}`);
 
-        this._mediacenterWorker = new Worker(player._options.decoder, {
-          name: player._options.decoderMode
-        });
+        let workerfile = '';
+
+        if (player._options.decoderMode === 'normal') {
+          workerfile = 'worker.js';
+        } else {
+          workerfile = 'worker_simd.js';
+        }
+
+        this._mediacenterWorker = new Worker(workerfile);
 
         this._mediacenterWorker.onmessageerror = event => {
           this._player._logger.info('mediacenter', `start worker thread err ${event}`);
@@ -2820,8 +2826,6 @@ void main(void) {
       //拉流失败重试次数
       retryDelay: 5,
       //重试时延 5000
-      decoder: 'worker.js',
-      //work线程的js文件
       decoderMode: "normal"
     };
 

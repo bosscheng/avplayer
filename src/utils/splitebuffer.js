@@ -1,6 +1,4 @@
 
-
-
 class SpliteBuffer {
 
     _sampleRate = 0;

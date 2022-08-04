@@ -37,7 +37,7 @@
 
  # 编译支持SIMD解码wasm ，使用android的解码库
 
-    (1) libavc（h264），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的CMakeLists.txt上加入编译项 -c -Oz -fPIC -msimd128）, 本工程里的代码已经配置好了
+    (1) libavc（h264），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的CMakeLists.txt上加入编译项  -O3 -msimd128）, 本工程里的代码已经配置好了
 
         先进入emcc容器
         cd Android/libavc
@@ -46,7 +46,7 @@
         emcmake cmake ..
         emmake make       
 
-    (2) libhevc（h265），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的 CMakeLists.txt上加入编译项 -c -Oz -fPIC -msimd128）, 本工程里的代码已经配置好了
+    (2) libhevc（h265），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的 CMakeLists.txt上加入编译项 -O3  -msimd128）, 本工程里的代码已经配置好了
 
         先进入emcc容器
         cd Android/libhevc
