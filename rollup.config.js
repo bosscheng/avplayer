@@ -102,10 +102,18 @@ export default [
         ],
     },
     {
-        input: 'src/mediacenter_worker.js',
+        input: 'src/worker/worker.js',
         output: {
             name: 'worker',
             file: isProd ? 'dist/worker.js' : 'demo/public/worker.js',
+        },
+        plugins: []
+    },
+    {
+        input: 'src/worker/worker_simd.js',
+        output: {
+            name: 'worker',
+            file: isProd ? 'dist/worker_simd.js' : 'demo/public/worker_simd.js',
         },
         plugins: []
     }
