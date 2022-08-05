@@ -73,7 +73,7 @@ class AudioPlayer extends EventEmitter {
 
             if (!pcmpacket) {
 
-                this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
+          //      this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
 
                 for (let i = 0; i < this._channels; i++) {
 

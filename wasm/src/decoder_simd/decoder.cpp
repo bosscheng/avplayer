@@ -61,6 +61,7 @@ public:
     int mBufMaxLen;
 
     bool mInit = false;
+    bool mAddCodec = false;
 
 public:
 
@@ -409,11 +410,26 @@ void  VideoDecoder::decode(string input, u32 isKeyFrame, u32 timestamp)
 
     bool bf = convertAnnexB(buffer, bufferLen);
 
-    if (isKeyFrame && !bf) {
+    if (!mAddCodec) {
 
-        //给关键帧补齐sps/pps/vps信息
-        int len = addCodecInfo(buffer, bufferLen);
-        mDecoderV->decode(mBuf, len, timestamp);
+        if (!isKeyFrame) {
+
+            printf("VideoDecoder first frame not I Frame \n");
+            return;
+        }
+
+        if (!bf) {
+
+            //给关键帧补齐sps/pps/vps信息
+            int len = addCodecInfo(buffer, bufferLen);
+            mDecoderV->decode(mBuf, len, timestamp);
+
+        } else {
+
+            mDecoderV->decode(buffer, bufferLen, timestamp);
+        }
+
+        mAddCodec = true;
 
     } else {
 

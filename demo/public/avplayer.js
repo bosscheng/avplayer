@@ -2660,8 +2660,7 @@ void main(void) {
           let pcmpacket = this._player.getPCMData(true);
 
           if (!pcmpacket) {
-            this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
-
+            //      this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
             for (let i = 0; i < this._channels; i++) {
               let nowBuffering = outputBuffer.getChannelData(i);
 
@@ -2829,7 +2828,7 @@ void main(void) {
       decoderMode: "normal"
     };
 
-    class AVPlayer {
+    class AVPlayer extends EventEmitter {
       _options = undefined;
       _render = undefined;
       _logger = undefined;
@@ -2844,6 +2843,7 @@ void main(void) {
       _stattimer = undefined;
 
       constructor(options) {
+        super();
         this._logger = new Logger();
 
         this._logger.setLogEnable(true);
@@ -2870,6 +2870,7 @@ void main(void) {
             pcm cosume framerate:${this._pcmframerate / this._statsec} bitrate:${this._pcmbitrate * 8 / this._statsec}
             `);
 
+          this.emit('fps', this._yuvframerate / this._statsec);
           this._yuvframerate = 0;
           this._yuvbitrate = 0;
           this._pcmframerate = 0;

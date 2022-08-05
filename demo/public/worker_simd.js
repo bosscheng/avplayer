@@ -5495,23 +5495,23 @@
 	    return (___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = Module["asm"]["Q"]).apply(null, arguments);
 	  };
 
+	  Module["dynCall_jiji"] = function () {
+	    return (Module["dynCall_jiji"] = Module["asm"]["R"]).apply(null, arguments);
+	  };
+
 	  Module["dynCall_viiijj"] = function () {
-	    return (Module["dynCall_viiijj"] = Module["asm"]["R"]).apply(null, arguments);
+	    return (Module["dynCall_viiijj"] = Module["asm"]["S"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jij"] = function () {
-	    return (Module["dynCall_jij"] = Module["asm"]["S"]).apply(null, arguments);
+	    return (Module["dynCall_jij"] = Module["asm"]["T"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jii"] = function () {
-	    return (Module["dynCall_jii"] = Module["asm"]["T"]).apply(null, arguments);
+	    return (Module["dynCall_jii"] = Module["asm"]["U"]).apply(null, arguments);
 	  };
 
-	  Module["dynCall_jiji"] = function () {
-	    return (Module["dynCall_jiji"] = Module["asm"]["U"]).apply(null, arguments);
-	  };
-
-	  Module["_ff_h264_cabac_tables"] = 284421;
+	  Module["_ff_h264_cabac_tables"] = 310293;
 
 	  var calledRun;
 
@@ -6656,7 +6656,7 @@
 	    this._stream.start();
 
 	    this._timer = setInterval(() => {
-	      let cnt = Math.min(30, this._gop.length);
+	      let cnt = Math.min(50, this._gop.length);
 
 	      while (cnt > 0) {
 	        this.handleTicket();
@@ -6664,7 +6664,7 @@
 	      }
 	    }, 10);
 	    this._stattimer = setInterval(() => {
-	      this._logger.info('MCSTAT', `------ MCSTAT ---------
+	      this._logger.info('WCSTAT', `------ WORKER CORE STAT ---------
         video gen framerate:${this._vframerate / this._statsec} bitrate:${this._vbitrate * 8 / this._statsec / 1024 / 1024}M
         audio gen framerate:${this._aframerate / this._statsec} bitrate:${this._abitrate * 8 / this._statsec}
         yuv   gen framerate:${this._yuvframerate / this._statsec} bitrate:${this._yuvbitrate * 8 / this._statsec}
@@ -6684,7 +6684,7 @@
 	  }
 
 	  registerEvents() {
-	    this._logger.info('MediaCenterInternal', `now play ${this._options.url}`);
+	    this._logger.info('WorkerCore', `now play ${this._options.url}`);
 
 	    this._stream.on('finish', () => {});
 
@@ -6700,13 +6700,13 @@
 	    });
 
 	    this._demuxer.on('videoinfo', videoinfo => {
-	      this._logger.info('MediaCenterInternal', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
+	      this._logger.info('WorkerCore', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
 	      this._vDecoder.setCodec(videoinfo.vtype, videoinfo.extradata);
 	    });
 
 	    this._demuxer.on('audioinfo', audioinfo => {
-	      this._logger.info('MediaCenterInternal', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
+	      this._logger.info('WorkerCore', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
 	      this._aDecoder.setCodec(audioinfo.atype, audioinfo.extradata);
 	    });
@@ -6742,11 +6742,11 @@
 
 	    clearInterval(this._stattimer);
 
-	    this._logger.info('MediaCenterInternal', `MediaCenterInternal destroy`);
+	    this._logger.info('WorkerCore', `WorkerCore destroy`);
 	  }
 
 	  reset() {
-	    this._logger.info('MediaCenterInternal', `work thiread reset, clear gop buffer & reset all Params`);
+	    this._logger.info('WorkerCore', `work thiread reset, clear gop buffer & reset all Params`);
 
 	    this._gop = [];
 	    this._lastts = 0;
@@ -6799,7 +6799,7 @@
 	      }
 
 	      if (bf) {
-	        this._logger.warn('MediaCenterInternal', `packet buffer cache too much, drop ${this._gop.length - i} packet`);
+	        this._logger.warn('WorkerCore', `packet buffer cache too much, drop ${this._gop.length - i} packet`);
 
 	        this._gop = this._gop.slice(0, i - 1);
 	      }
@@ -6832,12 +6832,12 @@
 	  }
 
 	  yuvData(yuv, timestamp) {
-	    //    this._logger.info('MediaCenterInternal', `yuvdata timestamp ${timestamp}`);
+	    //    this._logger.info('WorkerCore', `yuvdata timestamp ${timestamp}`);
 	    if (timestamp - this._lastts > 0x7FFFFFFF) {
-	      this._logger.info('MediaCenterInternal', `yuvdata timestamp error ${timestamp} last ${this._lastts}`);
+	      this._logger.info('WorkerCore', `yuvdata timestamp error ${timestamp} last ${this._lastts}`);
 
 	      return;
-	    } //   this._logger.info('MediaCenterInternal', `yuvdata timestamp${timestamp}`);
+	    } //   this._logger.info('WorkerCore', `yuvdata timestamp${timestamp}`);
 
 
 	    this._lastts = timestamp;
@@ -6871,12 +6871,12 @@
 	  }
 
 	  pcmData(pcmDataArray, samples, timestamp) {
-	    //     this._logger.info('MediaCenterInternal', `pcmData samples ${samples} timestamp${timestamp}`);
+	    //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
 	    if (timestamp - this._lastts > 0x7FFFFFFF) {
-	      this._logger.info('MediaCenterInternal', `pcmData timestamp error ${timestamp} last ${this._lastts}`);
+	      this._logger.info('WorkerCore', `pcmData timestamp error ${timestamp} last ${this._lastts}`);
 
 	      return;
-	    } // this._logger.info('MediaCenterInternal', `pcmData samples ${samples} timestamp${timestamp}`);
+	    } // this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
 
 
 	    this._lastts = timestamp;

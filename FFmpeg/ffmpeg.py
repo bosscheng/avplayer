@@ -3,7 +3,7 @@
 import os
 
 args = [
-    'extra-cflags="-O3"',
+    'extra-cflags="-O3 -flto"',
     'cc=emcc',
     'cxx=em++',
     'ar=emar',

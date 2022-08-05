@@ -3,6 +3,7 @@ import Logger from './utils/logger.js';
 import MediaCenter from './mediacenter/index.js';
 import { PixelType } from './constant/index.js';
 import AudioPlayer from './audio/audioplayer.js';
+import EventEmitter from './utils/events.js';
 
 const DEFAULT_PLAYER_OPTIONS = {
 
@@ -22,7 +23,7 @@ const DEFAULT_PLAYER_OPTIONS = {
     decoderMode:"normal"
 }
 
-class AVPlayer {
+class AVPlayer extends EventEmitter{
 
     _options = undefined;
 
@@ -42,6 +43,7 @@ class AVPlayer {
 
 
     constructor(options) {
+        super();
 
         this._logger = new Logger();
         this._logger.setLogEnable(true);
@@ -69,10 +71,13 @@ class AVPlayer {
             `);
 
 
+            this.emit('fps', this._yuvframerate/this._statsec);
+
             this._yuvframerate = 0;
             this._yuvbitrate = 0;
             this._pcmframerate = 0;
             this._pcmbitrate = 0;
+
 
 
         }, this._statsec*1000);
