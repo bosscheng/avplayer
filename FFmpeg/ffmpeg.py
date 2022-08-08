@@ -3,19 +3,19 @@
 import os
 
 args = [
-    'extra-cflags="-O3 -flto"',
+    'extra-cflags="-O3"',
     'cc=emcc',
     'cxx=em++',
     'ar=emar',
     'ranlib=emranlib',
-    'prefix=../wasm/thirdparty/ffmpeg',
+    'prefix=../wasm/obj',
     'target-os=none',
     'arch=x86_64',
     'cpu=generic'
     ]
 disables = [
     'everything','all','avdevice','postproc','avfilter','programs','asm','parsers','muxers','demuxers','filters',
-    'doc','devices','network','bsfs','shared','hwaccels','debug','protocols','indevs','outdevs','runtime-cpudetect'
+    'doc','devices','network','bsfs','shared','hwaccels','debug','protocols','indevs','outdevs','runtime-cpudetect','pthreads'
 ]
 enables = [
     'small','cross-compile','gpl','avcodec','swresample','ffmpeg','avformat',
