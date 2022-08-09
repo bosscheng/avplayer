@@ -51,7 +51,8 @@ class WorkerCore {
 
     _statsec = 2;
 
-    _lastts = 0;
+    _lastts;
+    _curpts;
 
     _Module = undefined;
 
@@ -309,15 +310,8 @@ class WorkerCore {
 
     //    this._logger.info('WorkerCore', `yuvdata timestamp ${timestamp}`);
 
-        if (timestamp - this._lastts > 0x7FFFFFFF) {
+       let nowpts = this.adjustTime(timestamp);
 
-            this._logger.info('WorkerCore', `yuvdata timestamp error ${timestamp} last ${this._lastts}`);
-            return;
-        }
-
-        //   this._logger.info('WorkerCore', `yuvdata timestamp${timestamp}`);
-
-        this._lastts = timestamp;
 
         let size = this._width*this._height*3/2;
         let out = this._Module.HEAPU8.subarray(yuv, yuv+size);
@@ -328,7 +322,7 @@ class WorkerCore {
         this._yuvbitrate += data.length;
 
         
-        postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
+        postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, nowpts}, [data.buffer]);
 
     }
 
@@ -341,22 +335,52 @@ class WorkerCore {
         postMessage({cmd: WORKER_EVENT_TYPE.audioInfo, atype, sampleRate, channels, samplesPerPacket:this._samplesPerPacket });
     }
 
+
+    adjustTime(timestamp) {
+
+        if (!this._lastts) {
+
+            this._lastts = timestamp;
+            this._curpts = 10000;
+
+        } else {
+
+            let diff = timestamp - this._lastts;
+
+            if (diff < -1000) {
+
+                this._curpts -= 25;
+                this._lastts = timestamp;
+
+                this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
+
+            } else if (diff > 1000) {
+
+                
+                this._curpts += diff;
+                this._lastts = timestamp;
+
+                this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
+
+            } else {
+
+                this._curpts += diff;
+                this._lastts = timestamp;
+
+            }
+
+        }
+
+        return this._curpts;
+
+    }
+
     pcmData(pcmDataArray, samples, timestamp) {
 
     //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
 
+        let nowpts = this.adjustTime(timestamp);
 
-        if (timestamp - this._lastts > 0x7FFFFFFF) {
-
-            this._logger.info('WorkerCore', `pcmData timestamp error ${timestamp} last ${this._lastts}`);
-            return;
-        }
-
-        // this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
-
-        this._lastts = timestamp;
-
-        
         let datas = [];
 
         this._pcmframerate++;
@@ -374,7 +398,7 @@ class WorkerCore {
 
             if(samples === this._samplesPerPacket) {
 
-                postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, timestamp}, datas.map(x => x.buffer));
+                postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, nowpts}, datas.map(x => x.buffer));
 
                 return;
             }
@@ -383,7 +407,7 @@ class WorkerCore {
             this._useSpliteBuffer = true;
         } 
 
-        this._spliteBuffer.addBuffer(datas, timestamp);
+        this._spliteBuffer.addBuffer(datas, nowpts);
 
         this._spliteBuffer.splite((buffers, ts) => {
 

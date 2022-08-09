@@ -3,12 +3,13 @@
 import os
 
 args = [
-    'extra-cflags="-O3"',
+    'extra-cflags="-O3 -flto"',
     'cc=emcc',
     'cxx=em++',
     'ar=emar',
+    'x86asmexe=emcc',
     'ranlib=emranlib',
-    'prefix=../wasm/obj',
+    'prefix=../wasm/thirdparty/ffmpeg',
     'target-os=none',
     'arch=x86_64',
     'cpu=generic'
@@ -28,9 +29,7 @@ enables = [
     'decoder=aac',
     'decoder=pcm_alaw',
     'decoder=pcm_mulaw',
-    'encoder=pcm_alaw',
-    'encoder=pcm_mulaw',
-    'encoder=aac','static'
+    'static'
 ]
 enables = ['enable-'+item for i,item in enumerate(enables)]
 disables = ['disable-'+item for i,item in enumerate(disables)]

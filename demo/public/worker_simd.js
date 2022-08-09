@@ -576,10 +576,10 @@
 	    function receiveInstance(instance, module) {
 	      var exports = instance.exports;
 	      Module["asm"] = exports;
-	      wasmMemory = Module["asm"]["H"];
+	      wasmMemory = Module["asm"]["G"];
 	      updateGlobalBufferAndViews(wasmMemory.buffer);
-	      wasmTable = Module["asm"]["L"];
-	      addOnInit(Module["asm"]["I"]);
+	      wasmTable = Module["asm"]["N"];
+	      addOnInit(Module["asm"]["H"]);
 	      removeRunDependency();
 	    }
 
@@ -5183,14 +5183,6 @@
 	    abort("");
 	  }
 
-	  function getHeapMax() {
-	    return HEAPU8.length;
-	  }
-
-	  function _emscripten_get_heap_max() {
-	    return getHeapMax();
-	  }
-
 	  function _emscripten_memcpy_big(dest, src, num) {
 	    HEAPU8.copyWithin(dest, src, src + num);
 	  }
@@ -5430,88 +5422,87 @@
 	    "a": ___assert_fail,
 	    "s": ___cxa_allocate_exception,
 	    "r": ___cxa_throw,
-	    "D": ___syscall_fcntl64,
-	    "x": ___syscall_openat,
+	    "C": ___syscall_fcntl64,
+	    "v": ___syscall_openat,
 	    "u": __embind_register_bigint,
-	    "F": __embind_register_bool,
-	    "m": __embind_register_class,
-	    "l": __embind_register_class_constructor,
+	    "E": __embind_register_bool,
+	    "n": __embind_register_class,
+	    "m": __embind_register_class_constructor,
 	    "e": __embind_register_class_function,
-	    "E": __embind_register_emval,
-	    "q": __embind_register_float,
+	    "D": __embind_register_emval,
+	    "p": __embind_register_float,
 	    "d": __embind_register_integer,
 	    "c": __embind_register_memory_view,
-	    "p": __embind_register_std_string,
-	    "k": __embind_register_std_wstring,
-	    "G": __embind_register_void,
-	    "j": __emscripten_date_now,
-	    "f": __emval_call_void_method,
+	    "q": __embind_register_std_string,
+	    "l": __embind_register_std_wstring,
+	    "F": __embind_register_void,
+	    "k": __emscripten_date_now,
+	    "g": __emval_call_void_method,
 	    "h": __emval_decref,
-	    "g": __emval_get_method_caller,
+	    "f": __emval_get_method_caller,
 	    "b": _abort,
-	    "w": _emscripten_get_heap_max,
-	    "B": _emscripten_memcpy_big,
-	    "v": _emscripten_resize_heap,
-	    "z": _environ_get,
-	    "A": _environ_sizes_get,
+	    "z": _emscripten_memcpy_big,
+	    "j": _emscripten_resize_heap,
+	    "x": _environ_get,
+	    "y": _environ_sizes_get,
 	    "o": _fd_close,
-	    "y": _fd_fdstat_get,
-	    "C": _fd_read,
+	    "w": _fd_fdstat_get,
+	    "B": _fd_read,
 	    "t": _fd_seek,
-	    "n": _fd_write,
+	    "A": _fd_write,
 	    "i": _setTempRet0
 	  };
 	  createWasm();
 
 	  Module["___wasm_call_ctors"] = function () {
-	    return (Module["___wasm_call_ctors"] = Module["asm"]["I"]).apply(null, arguments);
+	    return (Module["___wasm_call_ctors"] = Module["asm"]["H"]).apply(null, arguments);
 	  };
 
 	  var _free = Module["_free"] = function () {
-	    return (_free = Module["_free"] = Module["asm"]["J"]).apply(null, arguments);
+	    return (_free = Module["_free"] = Module["asm"]["I"]).apply(null, arguments);
 	  };
 
 	  var _malloc = Module["_malloc"] = function () {
-	    return (_malloc = Module["_malloc"] = Module["asm"]["K"]).apply(null, arguments);
+	    return (_malloc = Module["_malloc"] = Module["asm"]["J"]).apply(null, arguments);
 	  };
 
 	  var ___errno_location = Module["___errno_location"] = function () {
-	    return (___errno_location = Module["___errno_location"] = Module["asm"]["M"]).apply(null, arguments);
+	    return (___errno_location = Module["___errno_location"] = Module["asm"]["K"]).apply(null, arguments);
 	  };
 
 	  var ___getTypeName = Module["___getTypeName"] = function () {
-	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["N"]).apply(null, arguments);
+	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["L"]).apply(null, arguments);
 	  };
 
 	  Module["___embind_register_native_and_builtin_types"] = function () {
-	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["O"]).apply(null, arguments);
+	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["M"]).apply(null, arguments);
 	  };
 
 	  var _emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = function () {
-	    return (_emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = Module["asm"]["P"]).apply(null, arguments);
+	    return (_emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = Module["asm"]["O"]).apply(null, arguments);
 	  };
 
 	  var ___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = function () {
-	    return (___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = Module["asm"]["Q"]).apply(null, arguments);
-	  };
-
-	  Module["dynCall_jiji"] = function () {
-	    return (Module["dynCall_jiji"] = Module["asm"]["R"]).apply(null, arguments);
+	    return (___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = Module["asm"]["P"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_viiijj"] = function () {
-	    return (Module["dynCall_viiijj"] = Module["asm"]["S"]).apply(null, arguments);
+	    return (Module["dynCall_viiijj"] = Module["asm"]["Q"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jij"] = function () {
-	    return (Module["dynCall_jij"] = Module["asm"]["T"]).apply(null, arguments);
+	    return (Module["dynCall_jij"] = Module["asm"]["R"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jii"] = function () {
-	    return (Module["dynCall_jii"] = Module["asm"]["U"]).apply(null, arguments);
+	    return (Module["dynCall_jii"] = Module["asm"]["S"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 310293;
+	  Module["dynCall_jiji"] = function () {
+	    return (Module["dynCall_jiji"] = Module["asm"]["T"]).apply(null, arguments);
+	  };
+
+	  Module["_ff_h264_cabac_tables"] = 274613;
 
 	  var calledRun;
 
@@ -6635,7 +6626,8 @@
 	  _pcmframerate = 0;
 	  _pcmbitrate = 0;
 	  _statsec = 2;
-	  _lastts = 0;
+	  _lastts;
+	  _curpts;
 	  _Module = undefined;
 
 	  constructor(options, Module) {
@@ -6833,14 +6825,7 @@
 
 	  yuvData(yuv, timestamp) {
 	    //    this._logger.info('WorkerCore', `yuvdata timestamp ${timestamp}`);
-	    if (timestamp - this._lastts > 0x7FFFFFFF) {
-	      this._logger.info('WorkerCore', `yuvdata timestamp error ${timestamp} last ${this._lastts}`);
-
-	      return;
-	    } //   this._logger.info('WorkerCore', `yuvdata timestamp${timestamp}`);
-
-
-	    this._lastts = timestamp;
+	    let nowpts = this.adjustTime(timestamp);
 	    let size = this._width * this._height * 3 / 2;
 
 	    let out = this._Module.HEAPU8.subarray(yuv, yuv + size);
@@ -6853,7 +6838,7 @@
 	      data,
 	      width: this._width,
 	      height: this._height,
-	      timestamp
+	      nowpts
 	    }, [data.buffer]);
 	  }
 
@@ -6870,16 +6855,35 @@
 	    });
 	  }
 
+	  adjustTime(timestamp) {
+	    if (!this._lastts) {
+	      this._lastts = timestamp;
+	      this._curpts = 10000;
+	    } else {
+	      let diff = timestamp - this._lastts;
+
+	      if (diff < -1000) {
+	        this._curpts -= 25;
+	        this._lastts = timestamp;
+
+	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
+	      } else if (diff > 1000) {
+	        this._curpts += diff;
+	        this._lastts = timestamp;
+
+	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
+	      } else {
+	        this._curpts += diff;
+	        this._lastts = timestamp;
+	      }
+	    }
+
+	    return this._curpts;
+	  }
+
 	  pcmData(pcmDataArray, samples, timestamp) {
 	    //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
-	    if (timestamp - this._lastts > 0x7FFFFFFF) {
-	      this._logger.info('WorkerCore', `pcmData timestamp error ${timestamp} last ${this._lastts}`);
-
-	      return;
-	    } // this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
-
-
-	    this._lastts = timestamp;
+	    let nowpts = this.adjustTime(timestamp);
 	    let datas = [];
 	    this._pcmframerate++;
 
@@ -6894,7 +6898,7 @@
 	        postMessage({
 	          cmd: WORKER_EVENT_TYPE.pcmData,
 	          datas,
-	          timestamp
+	          nowpts
 	        }, datas.map(x => x.buffer));
 	        return;
 	      }
@@ -6903,7 +6907,7 @@
 	      this._useSpliteBuffer = true;
 	    }
 
-	    this._spliteBuffer.addBuffer(datas, timestamp);
+	    this._spliteBuffer.addBuffer(datas, nowpts);
 
 	    this._spliteBuffer.splite((buffers, ts) => {
 	      postMessage({
