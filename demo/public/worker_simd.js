@@ -576,10 +576,10 @@
 	    function receiveInstance(instance, module) {
 	      var exports = instance.exports;
 	      Module["asm"] = exports;
-	      wasmMemory = Module["asm"]["G"];
+	      wasmMemory = Module["asm"]["F"];
 	      updateGlobalBufferAndViews(wasmMemory.buffer);
-	      wasmTable = Module["asm"]["N"];
-	      addOnInit(Module["asm"]["H"]);
+	      wasmTable = Module["asm"]["M"];
+	      addOnInit(Module["asm"]["G"]);
 	      removeRunDependency();
 	    }
 
@@ -668,10 +668,6 @@
 	    }
 
 	    return func;
-	  }
-
-	  function ___assert_fail(condition, filename, line, func) {
-	    abort("Assertion failed: " + UTF8ToString(condition) + ", at: " + [filename ? UTF8ToString(filename) : "unknown filename", line, func ? UTF8ToString(func) : "unknown function"]);
 	  }
 
 	  function ___cxa_allocate_exception(size) {
@@ -5419,90 +5415,89 @@
 	  }
 
 	  var asmLibraryArg = {
-	    "a": ___assert_fail,
 	    "s": ___cxa_allocate_exception,
 	    "r": ___cxa_throw,
 	    "C": ___syscall_fcntl64,
 	    "v": ___syscall_openat,
 	    "u": __embind_register_bigint,
 	    "E": __embind_register_bool,
-	    "n": __embind_register_class,
-	    "m": __embind_register_class_constructor,
-	    "e": __embind_register_class_function,
+	    "m": __embind_register_class,
+	    "l": __embind_register_class_constructor,
+	    "d": __embind_register_class_function,
 	    "D": __embind_register_emval,
-	    "p": __embind_register_float,
-	    "d": __embind_register_integer,
-	    "c": __embind_register_memory_view,
-	    "q": __embind_register_std_string,
-	    "l": __embind_register_std_wstring,
-	    "F": __embind_register_void,
-	    "k": __emscripten_date_now,
-	    "g": __emval_call_void_method,
-	    "h": __emval_decref,
-	    "f": __emval_get_method_caller,
-	    "b": _abort,
+	    "o": __embind_register_float,
+	    "c": __embind_register_integer,
+	    "b": __embind_register_memory_view,
+	    "p": __embind_register_std_string,
+	    "k": __embind_register_std_wstring,
+	    "q": __embind_register_void,
+	    "j": __emscripten_date_now,
+	    "f": __emval_call_void_method,
+	    "g": __emval_decref,
+	    "e": __emval_get_method_caller,
+	    "a": _abort,
 	    "z": _emscripten_memcpy_big,
-	    "j": _emscripten_resize_heap,
+	    "i": _emscripten_resize_heap,
 	    "x": _environ_get,
 	    "y": _environ_sizes_get,
-	    "o": _fd_close,
+	    "n": _fd_close,
 	    "w": _fd_fdstat_get,
 	    "B": _fd_read,
 	    "t": _fd_seek,
 	    "A": _fd_write,
-	    "i": _setTempRet0
+	    "h": _setTempRet0
 	  };
 	  createWasm();
 
 	  Module["___wasm_call_ctors"] = function () {
-	    return (Module["___wasm_call_ctors"] = Module["asm"]["H"]).apply(null, arguments);
+	    return (Module["___wasm_call_ctors"] = Module["asm"]["G"]).apply(null, arguments);
 	  };
 
 	  var _free = Module["_free"] = function () {
-	    return (_free = Module["_free"] = Module["asm"]["I"]).apply(null, arguments);
+	    return (_free = Module["_free"] = Module["asm"]["H"]).apply(null, arguments);
 	  };
 
 	  var _malloc = Module["_malloc"] = function () {
-	    return (_malloc = Module["_malloc"] = Module["asm"]["J"]).apply(null, arguments);
+	    return (_malloc = Module["_malloc"] = Module["asm"]["I"]).apply(null, arguments);
 	  };
 
 	  var ___errno_location = Module["___errno_location"] = function () {
-	    return (___errno_location = Module["___errno_location"] = Module["asm"]["K"]).apply(null, arguments);
+	    return (___errno_location = Module["___errno_location"] = Module["asm"]["J"]).apply(null, arguments);
 	  };
 
 	  var ___getTypeName = Module["___getTypeName"] = function () {
-	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["L"]).apply(null, arguments);
+	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["K"]).apply(null, arguments);
 	  };
 
 	  Module["___embind_register_native_and_builtin_types"] = function () {
-	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["M"]).apply(null, arguments);
+	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["L"]).apply(null, arguments);
 	  };
 
 	  var _emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = function () {
-	    return (_emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = Module["asm"]["O"]).apply(null, arguments);
+	    return (_emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = Module["asm"]["N"]).apply(null, arguments);
 	  };
 
 	  var ___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = function () {
-	    return (___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = Module["asm"]["P"]).apply(null, arguments);
+	    return (___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = Module["asm"]["O"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_viiijj"] = function () {
-	    return (Module["dynCall_viiijj"] = Module["asm"]["Q"]).apply(null, arguments);
+	    return (Module["dynCall_viiijj"] = Module["asm"]["P"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jij"] = function () {
-	    return (Module["dynCall_jij"] = Module["asm"]["R"]).apply(null, arguments);
+	    return (Module["dynCall_jij"] = Module["asm"]["Q"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jii"] = function () {
-	    return (Module["dynCall_jii"] = Module["asm"]["S"]).apply(null, arguments);
+	    return (Module["dynCall_jii"] = Module["asm"]["R"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jiji"] = function () {
-	    return (Module["dynCall_jiji"] = Module["asm"]["T"]).apply(null, arguments);
+	    return (Module["dynCall_jiji"] = Module["asm"]["S"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 274613;
+	  Module["_ff_h264_cabac_tables"] = 271029;
 
 	  var calledRun;
 
