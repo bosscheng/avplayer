@@ -5497,7 +5497,7 @@
 	    return (Module["dynCall_jiji"] = Module["asm"]["S"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 271029;
+	  Module["_ff_h264_cabac_tables"] = 271061;
 
 	  var calledRun;
 
@@ -6607,6 +6607,7 @@
 	  _gop = [];
 	  _timer = undefined;
 	  _statistic = undefined;
+	  _lastStatTs = undefined;
 	  _useSpliteBuffer = false;
 	  _spliteBuffer = undefined;
 	  _logger = undefined;
@@ -6620,7 +6621,7 @@
 	  _yuvbitrate = 0;
 	  _pcmframerate = 0;
 	  _pcmbitrate = 0;
-	  _statsec = 2;
+	  _statsec = 10;
 	  _lastts;
 	  _curpts;
 	  _Module = undefined;
@@ -6650,12 +6651,17 @@
 	        cnt--;
 	      }
 	    }, 10);
+	    this._lastStatTs = new Date().getTime();
 	    this._stattimer = setInterval(() => {
-	      this._logger.info('WCSTAT', `------ WORKER CORE STAT ---------
-        video gen framerate:${this._vframerate / this._statsec} bitrate:${this._vbitrate * 8 / this._statsec / 1024 / 1024}M
-        audio gen framerate:${this._aframerate / this._statsec} bitrate:${this._abitrate * 8 / this._statsec}
-        yuv   gen framerate:${this._yuvframerate / this._statsec} bitrate:${this._yuvbitrate * 8 / this._statsec}
-        pcm   gen framerate:${this._pcmframerate / this._statsec} bitrate:${this._pcmbitrate * 8 / this._statsec}
+	      let now = new Date().getTime();
+	      let diff = (now - this._lastStatTs) / 1000;
+	      this._lastStatTs = now;
+
+	      this._logger.info('WCSTAT', `------ WORKER CORE STAT ${diff} ---------
+        video gen framerate:${this._vframerate / diff} bitrate:${this._vbitrate * 8 / diff / 1024 / 1024}M
+        audio gen framerate:${this._aframerate / diff} bitrate:${this._abitrate * 8 / diff}
+        yuv   gen framerate:${this._yuvframerate / diff} bitrate:${this._yuvbitrate * 8 / diff}
+        pcm   gen framerate:${this._pcmframerate / diff} bitrate:${this._pcmbitrate * 8 / diff}
         packet buffer left count ${this._gop.length}
         `);
 
@@ -6858,15 +6864,15 @@
 	      let diff = timestamp - this._lastts;
 
 	      if (diff < -1000) {
+	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
+
 	        this._curpts -= 25;
 	        this._lastts = timestamp;
-
-	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
 	      } else if (diff > 1000) {
+	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
+
 	        this._curpts += diff;
 	        this._lastts = timestamp;
-
-	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 	      } else {
 	        this._curpts += diff;
 	        this._lastts = timestamp;

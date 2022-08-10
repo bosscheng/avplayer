@@ -18,7 +18,8 @@
             <option value="cube">立方体</option>
         </select>
         <select id="decodermode">
-            <option value="simd">支持SIMD解码</option>
+            <option value="simd_1">SIMD-BDE解码</option>
+            <option value="simd">SIMD解码</option>
             <option value="normal">正常解码</option>
         </select>
         <select id="playmode">
@@ -78,7 +79,7 @@ function main() {
        let options = {
             container: $container,
             url:addrinput.value,
-            delay:2000,
+            delay:3000,
             width:1280,
             height:720,
             renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value,
@@ -152,8 +153,8 @@ main();
 
 
 </script>
-<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+<!-- <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
 <script>
   // VConsole 默认会挂载到 `window.VConsole` 上
   var vConsole = new window.VConsole();
-</script>
+</script> -->

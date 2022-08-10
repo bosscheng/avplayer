@@ -16,17 +16,27 @@ class MediaCenter extends EventEmitter  {
 
         this._player = player;
 
-        this._player._logger.info('mediacenter', `start worker thread ${player._options.decoder}`);
+        this._player._logger.info('mediacenter', `start worker thread ${player._options.decoderMode}`);
 
         let workerfile = '';
 
         if (player._options.decoderMode === 'normal') {
 
             workerfile = 'worker.js';
-        } else {
+
+        } else if (player._options.decoderMode === 'simd') {
 
             workerfile = 'worker_simd.js';
+
+        } else if (player._options.decoderMode === 'simd_1') {
+
+            workerfile = 'worker_simd_1.js';
+        } else {
+
+            this._player._logger.console.error();('mediacenter', `decoderMode not support ${player._options.decoderMode}`);
+            return;
         }
+
 
         this._mediacenterWorker = new Worker(workerfile);
 

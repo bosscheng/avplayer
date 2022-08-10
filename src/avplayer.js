@@ -40,6 +40,7 @@ class AVPlayer extends EventEmitter{
     _pcmbitrate = 0;
     _statsec = 2;
     _stattimer = undefined;
+    _lastStatTs = undefined;
 
 
     constructor(options) {
@@ -63,15 +64,21 @@ class AVPlayer extends EventEmitter{
     
     startStatisc() {
 
+        this._lastStatTs = new Date().getTime();
+
         this._stattimer = setInterval(() => {
+
+            let now = new Date().getTime();
+            let diff = (now - this._lastStatTs)/1000;
+            this._lastStatTs = now;
             
-            this._logger.info('STAT', `------ STAT ---------
-            yuv cosume framerate:${this._yuvframerate/this._statsec} bitrate:${this._yuvbitrate*8/this._statsec}
-            pcm cosume framerate:${this._pcmframerate/this._statsec} bitrate:${this._pcmbitrate*8/this._statsec}
+            this._logger.info('STAT', `------ STAT  ${diff} ---------
+            yuv cosume framerate:${this._yuvframerate/diff} bitrate:${this._yuvbitrate*8/diff}
+            pcm cosume framerate:${this._pcmframerate/diff} bitrate:${this._pcmbitrate*8/diff}
             `);
 
 
-            this.emit('fps', this._yuvframerate/this._statsec);
+            this.emit('fps', this._yuvframerate/diff);
 
             this._yuvframerate = 0;
             this._yuvbitrate = 0;

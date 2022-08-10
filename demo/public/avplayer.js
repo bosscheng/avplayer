@@ -2500,14 +2500,21 @@ void main(void) {
         super();
         this._player = player;
 
-        this._player._logger.info('mediacenter', `start worker thread ${player._options.decoder}`);
+        this._player._logger.info('mediacenter', `start worker thread ${player._options.decoderMode}`);
 
         let workerfile = '';
 
         if (player._options.decoderMode === 'normal') {
           workerfile = 'worker.js';
-        } else {
+        } else if (player._options.decoderMode === 'simd') {
           workerfile = 'worker_simd.js';
+        } else if (player._options.decoderMode === 'simd_1') {
+          workerfile = 'worker_simd_1.js';
+        } else {
+          this._player._logger.console.error();
+
+          `decoderMode not support ${player._options.decoderMode}`;
+          return;
         }
 
         this._mediacenterWorker = new Worker(workerfile);
@@ -2841,6 +2848,7 @@ void main(void) {
       _pcmbitrate = 0;
       _statsec = 2;
       _stattimer = undefined;
+      _lastStatTs = undefined;
 
       constructor(options) {
         super();
@@ -2864,13 +2872,18 @@ void main(void) {
       }
 
       startStatisc() {
+        this._lastStatTs = new Date().getTime();
         this._stattimer = setInterval(() => {
-          this._logger.info('STAT', `------ STAT ---------
-            yuv cosume framerate:${this._yuvframerate / this._statsec} bitrate:${this._yuvbitrate * 8 / this._statsec}
-            pcm cosume framerate:${this._pcmframerate / this._statsec} bitrate:${this._pcmbitrate * 8 / this._statsec}
+          let now = new Date().getTime();
+          let diff = (now - this._lastStatTs) / 1000;
+          this._lastStatTs = now;
+
+          this._logger.info('STAT', `------ STAT  ${diff} ---------
+            yuv cosume framerate:${this._yuvframerate / diff} bitrate:${this._yuvbitrate * 8 / diff}
+            pcm cosume framerate:${this._pcmframerate / diff} bitrate:${this._pcmbitrate * 8 / diff}
             `);
 
-          this.emit('fps', this._yuvframerate / this._statsec);
+          this.emit('fps', this._yuvframerate / diff);
           this._yuvframerate = 0;
           this._yuvbitrate = 0;
           this._pcmframerate = 0;

@@ -1,0 +1,1 @@
+/emsdk/upstream/emscripten/em++  -O3 -DNDEBUG   @CMakeFiles/hdrcopy.dir/objects1.rsp  -o hdrcopy.js @CMakeFiles/hdrcopy.dir/linklibs.rsp
