@@ -16,7 +16,7 @@ function caculateSamplesPerPacket(sampleRate) {
 
     if (sampleRate >= 44100) {
 
-        return 512;
+        return 1024;
 
     } else if (sampleRate >= 22050) {
 

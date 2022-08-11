@@ -1,4 +1,4 @@
-import EventEmitter from '../utils/events.js';
+import EventEmitter from 'eventemitter3';
 import { readAACSpecificConfig, getAACProfileName, readAVCSpecificConfig, getAVCProfileName } from '../utils/specific.js';
 import {AVPacket, VideoInfo, AudioInfo} from '../utils/av.js';
 import {AVType, VideoType, AudioType, PixelType, ADTS_HEADER_SIZE, AAC_SAMPLE_RATE, AACProfile} from '../constant'

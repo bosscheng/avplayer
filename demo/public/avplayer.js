@@ -2107,394 +2107,352 @@ void main(void) {
 
     }
 
-    class EventEmitter {
-      on(name, fn, ctx) {
-        const e = this.e || (this.e = {});
-        (e[name] || (e[name] = [])).push({
-          fn,
-          ctx
-        });
-        return this;
-      }
-
-      once(name, fn, ctx) {
-        const self = this;
-
-        function listener() {
-          self.off(name, listener);
-
-          for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-            args[_key] = arguments[_key];
-          }
-
-          fn.apply(ctx, args);
-        }
-
-        listener._ = fn;
-        return this.on(name, listener, ctx);
-      }
-
-      emit(name) {
-        const evtArr = ((this.e || (this.e = {}))[name] || []).slice();
-
-        for (var _len2 = arguments.length, data = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-          data[_key2 - 1] = arguments[_key2];
-        }
-
-        for (let i = 0; i < evtArr.length; i += 1) {
-          evtArr[i].fn.apply(evtArr[i].ctx, data);
-        }
-
-        return this;
-      }
-
-      off(name, callback) {
-        const e = this.e || (this.e = {});
-
-        if (!name) {
-          Object.keys(e).forEach(key => {
-            delete e[key];
-          });
-          delete this.e;
-          return;
-        }
-
-        const evts = e[name];
-        const liveEvents = [];
-
-        if (evts && callback) {
-          for (let i = 0, len = evts.length; i < len; i += 1) {
-            if (evts[i].fn !== callback && evts[i].fn._ !== callback) liveEvents.push(evts[i]);
-          }
-        }
-
-        if (liveEvents.length) {
-          e[name] = liveEvents;
-        } else {
-          delete e[name];
-        }
-
-        return this;
-      }
-
+    function createCommonjsModule(fn, module) {
+    	return module = { exports: {} }, fn(module, module.exports), module.exports;
     }
 
-    const JitterBufferStatus = {
-      notstart: 'notstart',
-      //未开始
-      bufferring: 'bufferring',
-      //开始，等待缓冲满
-      bufferReady: 'bufferReady' //buffer准备好了，可以播放了
-
-    };
-    const DispatchStrategy = {
-      outAudioDriven: 'outAudioDriven',
-      // 外部音频播放模块驱动，音画对齐效果最好
-      outTimerDriven: 'outTimerDriven',
-      // 外部定时器驱动，内部需要建立时钟对齐音画
-      playVideoOnlyDriven: 'playVideoOnlyDriven' // 内部定时器驱动，该模式不播放声音，声音数据直接丢弃，内部需要建立时钟
-
-    };
-    const delayScale = 3.0;
-
-    class JitterBuffer extends EventEmitter {
-      _vgop = [];
-      _agop = [];
-      _status = JitterBufferStatus.notstart;
-      _strategy = DispatchStrategy.outAudioDriven;
-      _firstpacketts = undefined; //如果 _strategy是playVideoOnlyDriven，为video gop 的首帧ts，否则为 audio gop的首帧ts
-
-      _firstts = undefined;
-      _player = undefined;
-      _playTimer = undefined;
-      _statisticTimer = undefined;
-
-      constructor(player) {
-        super();
-        this._player = player;
-        this._statisticTimer = setInterval(() => {
-          this._player._logger.info('jitterbuffer', `strategy ${this._strategy} video ${this._vgop.length} audio ${this._agop.length}`);
-        }, 2000);
-      }
-
-      reset() {
-        this._agop = [];
-        this._vgop = [];
-
-        if (this._playTimer) {
-          clearInterval(this._playTimer);
-          this._playTimer = undefined;
-        }
-
-        this._status = JitterBufferStatus.notstart;
-        this._strategy = DispatchStrategy.outAudioDriven;
-        this._firstpacketts = undefined;
-        this._firstts = undefined;
-      }
-
-      destroy() {
-        this.reset();
-
-        if (this._statisticTimer) {
-          clearInterval(this._statisticTimer);
-        }
-
-        this.off();
-
-        this._player._logger.info('JitterBuffer', 'JitterBuffer destroy');
-      }
-
-      playVideoOnly() {
-        this.changeStrategy(DispatchStrategy.playVideoOnlyDriven);
-      }
-
-      playVideoTicket() {
-        if (this._strategy !== DispatchStrategy.playVideoOnlyDriven) {
-          this._player._logger.error('jitterbuffer', `strategy [${this._strategy}] playVideoTicket not allowed, some error happen, please check logic`);
-
-          return;
-        }
-
-        if (this._vgop.length < 1) {
-          return;
-        }
-
-        let now = new Date().getTime();
-
-        if (now - this._firstts < this._vgop[0].timestamp - this._firstpacketts) {
-          return;
-        }
-
-        let yuvpacket = this._vgop.shift();
-
-        this.emit('yuvdata', yuvpacket);
-        this.updateJitterBufferState();
-      }
-
-      changeStrategy(strategy) {
-        if (this._strategy === strategy) {
-          return;
-        }
-
-        if (this._strategy === DispatchStrategy.playVideoOnlyDriven) {
-          this._player._logger.warn('jitterbuffer', `changeStrategy ${strategy} not allowed, because cur strategy is play Video only`);
-
-          return;
-        }
-
-        this._strategy = strategy;
-
-        this._player._logger.info('jitterbuffer', `changeStrategy ${strategy} success`); //策略变化，jitterbuffer状态机从头开始跑一遍
-
-
-        this._status = JitterBufferStatus.notstart;
-        this.updateJitterBufferState();
-
-        if (this._strategy === DispatchStrategy.playVideoOnlyDriven) {
-          if (this._playTimer) {
-            clearInterval(this._playTimer);
-          }
-
-          let sec = 40;
-          this._playTimer = setInterval(() => {
-            this.playVideoTicket();
-          }, sec);
-
-          this._player._logger.info('jitterbuffer', `strategy [${this._strategy}]  start play video timer ${1000 / sec} frames per second`);
-        }
-      }
-
-      pushPCMData(datas, timestamp) {
-        if (this._strategy === DispatchStrategy.playVideoOnlyDriven) {
-          //声音直接丢弃
-          return;
-        }
-
-        let pcmpacket = {
-          datas,
-          timestamp
-        };
-
-        this._agop.push(pcmpacket);
-
-        this.updateJitterBufferState();
-      }
-
-      pushYUVData(data, timestamp, width, height) {
-        let yuvpacket = {
-          width,
-          height,
-          data,
-          timestamp
-        };
-
-        this._vgop.push(yuvpacket);
-
-        if (this._strategy === DispatchStrategy.playVideoOnlyDriven) {
-          this.updateJitterBufferState();
-        }
-      }
-
-      getPCMData(trust) {
-        this.changeStrategy(trust ? DispatchStrategy.outAudioDriven : DispatchStrategy.outTimerDriven);
-
-        if (this._strategy === DispatchStrategy.playVideoOnlyDriven) {
-          this._player._logger.error('jitterbuffer', `strategy [${this._strategy}] getPCMData not allowed, some error happen, check the logic`);
-
-          return;
-        }
-
-        if (this._status !== JitterBufferStatus.bufferReady || this._agop.length < 1) {
-          return;
-        }
-
-        let now = new Date().getTime();
-
-        if (this._strategy === DispatchStrategy.outTimerDriven && now - this._firstts < this._agop[0].timestamp - this._firstpacketts) {
-          return;
-        }
-
-        let pcmpacket = this._agop.shift();
-
-        this.syncVideo(pcmpacket.timestamp);
-        this.updateJitterBufferState();
-        return pcmpacket;
-      }
-
-      syncVideo(timestamp, drop) {
-        let yuvpacket = undefined;
-        let count = 0;
-
-        while (1) {
-          if (this._vgop.length < 1) {
-            break;
-          }
-
-          if (this._vgop[0].timestamp > timestamp) {
-            break;
-          }
-
-          yuvpacket = this._vgop.shift();
-          count++;
-
-          if (!drop) {
-            this.emit('yuvdata', yuvpacket);
-          }
-        }
-
-        return count;
-      }
-
-      updateJitterBufferState() {
-        let ret = true;
-
-        while (ret) {
-          ret = this.tryUpdateJitterBufferState();
-        }
-      }
-
-      tryUpdateJitterBufferState() {
-        let gop = this._strategy === DispatchStrategy.playVideoOnlyDriven ? this._vgop : this._agop;
-
-        if (this._status === JitterBufferStatus.notstart) {
-          if (gop.length < 1) {
-            return false;
-          }
-
-          this._status = JitterBufferStatus.bufferring;
-          return true;
-        } else if (this._status === JitterBufferStatus.bufferring) {
-          if (gop.length < 2) {
-            this._player._logger.warn('jitterbuffer', `strategy [${this._strategy}] now buffering, but gop len [${gop.length}] less than 2,`);
-
-            return false;
-          }
-
-          if (gop[gop.length - 1].timestamp - gop[0].timestamp > this._player._options.delay) {
-            this._firstpacketts = gop[0].timestamp;
-            this._firstts = new Date().getTime();
-            this._status = JitterBufferStatus.bufferReady;
-
-            this._player._logger.info('jitterbuffer', `strategy [${this._strategy}] gop buffer ok, delay ${this._player._options.delay}, last[${gop[gop.length - 1].timestamp}] first[${gop[0].timestamp}] `);
-
-            return true;
-          }
-
-          return false;
-        } else if (this._status === JitterBufferStatus.bufferReady) {
-          if (gop.length < 1) {
-            this._player._logger.warn('jitterbuffer', `strategy [${this._strategy}] gop buffer is empty, restart buffering`);
-
-            this._status = JitterBufferStatus.bufferring;
-            return false;
-          }
-
-          this.tryDropFrames();
-          return false;
-        } else {
-          this._player._logger.error('jitterbuffer', `strategy [${this._strategy}] jittbuffer status [${this._status}]  error !!!`);
-        }
-
-        return false;
-      }
-
-      tryDropFrames() {
-        if (this._player._options.playMode !== 'live') {
-          //  this._player._logger.error('jitterbuffer',`not drop frame!!!`);
-          return;
-        } //  this._player._logger.error('jitterbuffer',`drop frame [${this._player._options.playMode}] !!!`);
-
-
-        let dropDelay = this._player._options.delay * delayScale;
-
-        if (this._strategy === DispatchStrategy.playVideoOnlyDriven) {
-          if (this._vgop.length < 2) {
-            return;
-          }
-
-          if (this._agop.length > 0) {
-            this._player._logger.warn('jitterbuffer', `strategy [${this._strategy}] drop frames find audio ${this._agop.length}`);
-
-            this._agop = [];
-          }
-
-          if (this._vgop[this._vgop.length - 1].timestamp - this._vgop[0].timestamp > dropDelay) {
-            //丢弃一半
-            let vdropcnt = Math.floor(this._vgop.length / 2);
-            this._vgop = this._vgop.slice(vdropcnt);
-            this._firstpacketts = this._vgop[0].timestamp;
-            this._firstts = new Date().getTime();
-
-            this._player._logger.info('jitterbuffer', `strategy [${this._strategy}] drop video frame ${vdropcnt}, now exist ${this._vgop.length}, delay ${this._player._options.delay}, last[${this._vgop[this._vgop.length - 1].timestamp}] first[${this._vgop[0].timestamp}] `);
-
-            return;
-          }
-        } else {
-          if (this._agop.length < 2) {
-            return;
-          }
-
-          if (this._agop[this._agop.length - 1].timestamp - this._agop[0].timestamp > dropDelay) {
-            //丢弃一半
-            let adropcnt = Math.floor(this._agop.length / 2);
-            this._agop = this._agop.slice(adropcnt);
-            this._firstpacketts = this._agop[0].timestamp;
-            this._firstts = new Date().getTime();
-            let vdropcnt = this.syncVideo(this._firstpacketts, true);
-
-            this._player._logger.info('jitterbuffer', `strategy [${this._strategy}] drop audio frame ${adropcnt} vedio frams ${vdropcnt}, now exist audio ${this._agop.length} video ${this._vgop.length}, delay ${this._player._options.delay}, last[${this._agop[this._agop.length - 1].timestamp}] first[${this._agop[0].timestamp}] `);
-
-            return;
-          }
-        }
-      }
-
+    var eventemitter3 = createCommonjsModule(function (module) {
+
+    var has = Object.prototype.hasOwnProperty
+      , prefix = '~';
+
+    /**
+     * Constructor to create a storage for our `EE` objects.
+     * An `Events` instance is a plain object whose properties are event names.
+     *
+     * @constructor
+     * @private
+     */
+    function Events() {}
+
+    //
+    // We try to not inherit from `Object.prototype`. In some engines creating an
+    // instance in this way is faster than calling `Object.create(null)` directly.
+    // If `Object.create(null)` is not supported we prefix the event names with a
+    // character to make sure that the built-in object properties are not
+    // overridden or used as an attack vector.
+    //
+    if (Object.create) {
+      Events.prototype = Object.create(null);
+
+      //
+      // This hack is needed because the `__proto__` property is still inherited in
+      // some old browsers like Android 4, iPhone 5.1, Opera 11 and Safari 5.
+      //
+      if (!new Events().__proto__) prefix = false;
     }
 
-    class MediaCenter extends EventEmitter {
+    /**
+     * Representation of a single event listener.
+     *
+     * @param {Function} fn The listener function.
+     * @param {*} context The context to invoke the listener with.
+     * @param {Boolean} [once=false] Specify if the listener is a one-time listener.
+     * @constructor
+     * @private
+     */
+    function EE(fn, context, once) {
+      this.fn = fn;
+      this.context = context;
+      this.once = once || false;
+    }
+
+    /**
+     * Add a listener for a given event.
+     *
+     * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+     * @param {(String|Symbol)} event The event name.
+     * @param {Function} fn The listener function.
+     * @param {*} context The context to invoke the listener with.
+     * @param {Boolean} once Specify if the listener is a one-time listener.
+     * @returns {EventEmitter}
+     * @private
+     */
+    function addListener(emitter, event, fn, context, once) {
+      if (typeof fn !== 'function') {
+        throw new TypeError('The listener must be a function');
+      }
+
+      var listener = new EE(fn, context || emitter, once)
+        , evt = prefix ? prefix + event : event;
+
+      if (!emitter._events[evt]) emitter._events[evt] = listener, emitter._eventsCount++;
+      else if (!emitter._events[evt].fn) emitter._events[evt].push(listener);
+      else emitter._events[evt] = [emitter._events[evt], listener];
+
+      return emitter;
+    }
+
+    /**
+     * Clear event by name.
+     *
+     * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+     * @param {(String|Symbol)} evt The Event name.
+     * @private
+     */
+    function clearEvent(emitter, evt) {
+      if (--emitter._eventsCount === 0) emitter._events = new Events();
+      else delete emitter._events[evt];
+    }
+
+    /**
+     * Minimal `EventEmitter` interface that is molded against the Node.js
+     * `EventEmitter` interface.
+     *
+     * @constructor
+     * @public
+     */
+    function EventEmitter() {
+      this._events = new Events();
+      this._eventsCount = 0;
+    }
+
+    /**
+     * Return an array listing the events for which the emitter has registered
+     * listeners.
+     *
+     * @returns {Array}
+     * @public
+     */
+    EventEmitter.prototype.eventNames = function eventNames() {
+      var names = []
+        , events
+        , name;
+
+      if (this._eventsCount === 0) return names;
+
+      for (name in (events = this._events)) {
+        if (has.call(events, name)) names.push(prefix ? name.slice(1) : name);
+      }
+
+      if (Object.getOwnPropertySymbols) {
+        return names.concat(Object.getOwnPropertySymbols(events));
+      }
+
+      return names;
+    };
+
+    /**
+     * Return the listeners registered for a given event.
+     *
+     * @param {(String|Symbol)} event The event name.
+     * @returns {Array} The registered listeners.
+     * @public
+     */
+    EventEmitter.prototype.listeners = function listeners(event) {
+      var evt = prefix ? prefix + event : event
+        , handlers = this._events[evt];
+
+      if (!handlers) return [];
+      if (handlers.fn) return [handlers.fn];
+
+      for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
+        ee[i] = handlers[i].fn;
+      }
+
+      return ee;
+    };
+
+    /**
+     * Return the number of listeners listening to a given event.
+     *
+     * @param {(String|Symbol)} event The event name.
+     * @returns {Number} The number of listeners.
+     * @public
+     */
+    EventEmitter.prototype.listenerCount = function listenerCount(event) {
+      var evt = prefix ? prefix + event : event
+        , listeners = this._events[evt];
+
+      if (!listeners) return 0;
+      if (listeners.fn) return 1;
+      return listeners.length;
+    };
+
+    /**
+     * Calls each of the listeners registered for a given event.
+     *
+     * @param {(String|Symbol)} event The event name.
+     * @returns {Boolean} `true` if the event had listeners, else `false`.
+     * @public
+     */
+    EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
+      var evt = prefix ? prefix + event : event;
+
+      if (!this._events[evt]) return false;
+
+      var listeners = this._events[evt]
+        , len = arguments.length
+        , args
+        , i;
+
+      if (listeners.fn) {
+        if (listeners.once) this.removeListener(event, listeners.fn, undefined, true);
+
+        switch (len) {
+          case 1: return listeners.fn.call(listeners.context), true;
+          case 2: return listeners.fn.call(listeners.context, a1), true;
+          case 3: return listeners.fn.call(listeners.context, a1, a2), true;
+          case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
+          case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
+          case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
+        }
+
+        for (i = 1, args = new Array(len -1); i < len; i++) {
+          args[i - 1] = arguments[i];
+        }
+
+        listeners.fn.apply(listeners.context, args);
+      } else {
+        var length = listeners.length
+          , j;
+
+        for (i = 0; i < length; i++) {
+          if (listeners[i].once) this.removeListener(event, listeners[i].fn, undefined, true);
+
+          switch (len) {
+            case 1: listeners[i].fn.call(listeners[i].context); break;
+            case 2: listeners[i].fn.call(listeners[i].context, a1); break;
+            case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
+            case 4: listeners[i].fn.call(listeners[i].context, a1, a2, a3); break;
+            default:
+              if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
+                args[j - 1] = arguments[j];
+              }
+
+              listeners[i].fn.apply(listeners[i].context, args);
+          }
+        }
+      }
+
+      return true;
+    };
+
+    /**
+     * Add a listener for a given event.
+     *
+     * @param {(String|Symbol)} event The event name.
+     * @param {Function} fn The listener function.
+     * @param {*} [context=this] The context to invoke the listener with.
+     * @returns {EventEmitter} `this`.
+     * @public
+     */
+    EventEmitter.prototype.on = function on(event, fn, context) {
+      return addListener(this, event, fn, context, false);
+    };
+
+    /**
+     * Add a one-time listener for a given event.
+     *
+     * @param {(String|Symbol)} event The event name.
+     * @param {Function} fn The listener function.
+     * @param {*} [context=this] The context to invoke the listener with.
+     * @returns {EventEmitter} `this`.
+     * @public
+     */
+    EventEmitter.prototype.once = function once(event, fn, context) {
+      return addListener(this, event, fn, context, true);
+    };
+
+    /**
+     * Remove the listeners of a given event.
+     *
+     * @param {(String|Symbol)} event The event name.
+     * @param {Function} fn Only remove the listeners that match this function.
+     * @param {*} context Only remove the listeners that have this context.
+     * @param {Boolean} once Only remove one-time listeners.
+     * @returns {EventEmitter} `this`.
+     * @public
+     */
+    EventEmitter.prototype.removeListener = function removeListener(event, fn, context, once) {
+      var evt = prefix ? prefix + event : event;
+
+      if (!this._events[evt]) return this;
+      if (!fn) {
+        clearEvent(this, evt);
+        return this;
+      }
+
+      var listeners = this._events[evt];
+
+      if (listeners.fn) {
+        if (
+          listeners.fn === fn &&
+          (!once || listeners.once) &&
+          (!context || listeners.context === context)
+        ) {
+          clearEvent(this, evt);
+        }
+      } else {
+        for (var i = 0, events = [], length = listeners.length; i < length; i++) {
+          if (
+            listeners[i].fn !== fn ||
+            (once && !listeners[i].once) ||
+            (context && listeners[i].context !== context)
+          ) {
+            events.push(listeners[i]);
+          }
+        }
+
+        //
+        // Reset the array, or remove it completely if we have no more listeners.
+        //
+        if (events.length) this._events[evt] = events.length === 1 ? events[0] : events;
+        else clearEvent(this, evt);
+      }
+
+      return this;
+    };
+
+    /**
+     * Remove all listeners, or those of the specified event.
+     *
+     * @param {(String|Symbol)} [event] The event name.
+     * @returns {EventEmitter} `this`.
+     * @public
+     */
+    EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
+      var evt;
+
+      if (event) {
+        evt = prefix ? prefix + event : event;
+        if (this._events[evt]) clearEvent(this, evt);
+      } else {
+        this._events = new Events();
+        this._eventsCount = 0;
+      }
+
+      return this;
+    };
+
+    //
+    // Alias methods names because people roll like that.
+    //
+    EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+    EventEmitter.prototype.addListener = EventEmitter.prototype.on;
+
+    //
+    // Expose the prefix.
+    //
+    EventEmitter.prefixed = prefix;
+
+    //
+    // Allow `EventEmitter` to be imported as module namespace.
+    //
+    EventEmitter.EventEmitter = EventEmitter;
+
+    //
+    // Expose the module.
+    //
+    {
+      module.exports = EventEmitter;
+    }
+    });
+
+    class MediaCenter extends eventemitter3 {
       _mediacenterWorker = undefined;
       _player;
-      _jitterBuffer = undefined;
+      _isDestoryed = false;
 
       constructor(player) {
         super();
@@ -2545,8 +2503,6 @@ void main(void) {
 
             case WORKER_EVENT_TYPE.reseted:
               {
-                this._jitterBuffer.reset();
-
                 break;
               }
 
@@ -2554,22 +2510,28 @@ void main(void) {
               {
                 this._mediacenterWorker.terminate();
 
-                this._jitterBuffer.destroy();
-
                 break;
               }
 
             case WORKER_EVENT_TYPE.videoInfo:
               {
-                this.emit('videoinfo', msg.vtype, msg.width, msg.height); //    this._jitterBuffer.playVideoOnly();
-
+                this.emit('videoinfo', msg.vtype, msg.width, msg.height);
                 break;
               }
 
             case WORKER_EVENT_TYPE.yuvData:
               {
-                this._jitterBuffer.pushYUVData(msg.data, msg.timestamp, msg.width, msg.height);
+                if (this._isDestoryed) {
+                  return;
+                }
 
+                let packet = {
+                  data: msg.data,
+                  timestamp: msg.timestamp,
+                  width: msg.width,
+                  height: msg.height
+                };
+                this.emit('yuvdata', packet);
                 break;
               }
 
@@ -2581,22 +2543,24 @@ void main(void) {
 
             case WORKER_EVENT_TYPE.pcmData:
               {
-                this._jitterBuffer.pushPCMData(msg.datas, msg.timestamp);
+                if (this._isDestoryed) {
+                  return;
+                }
 
+                let packet = {
+                  datas: msg.datas,
+                  timestamp: msg.timestamp
+                };
+                this.emit('pcmdata', packet);
                 break;
               }
           }
         };
-
-        this._jitterBuffer = new JitterBuffer(player);
-
-        this._jitterBuffer.on('yuvdata', yuvpacket => {
-          this.emit('yuvdata', yuvpacket);
-        });
       }
 
       destroy() {
         this.off();
+        this._isDestoryed = true;
 
         this._mediacenterWorker.postMessage({
           cmd: WORKER_SEND_TYPE.destroy
@@ -2605,17 +2569,13 @@ void main(void) {
         this._player._logger.info('MediaCenter', 'MediaCenter destroy');
       }
 
-      getPCMData(trust) {
-        return this._jitterBuffer.getPCMData(trust);
-      }
-
     }
 
     function clamp(num, a, b) {
       return Math.max(Math.min(num, Math.max(a, b)), Math.min(a, b));
     } //浏览器播放声音时，传递的切片里采样个数要求是2的倍数，根据采样率选择一个合适的采样切片数
 
-    class AudioPlayer extends EventEmitter {
+    class AudioPlayer extends eventemitter3 {
       _player = undefined;
       _audioContext = undefined;
       _gainNode = undefined;
@@ -2625,7 +2585,7 @@ void main(void) {
       _samplerate = 0;
       _channels = 0;
       _samplesPerPacket = 0;
-      _ticket = undefined;
+      _pcmlist = [];
       _init = false;
 
       constructor(player) {
@@ -2653,18 +2613,10 @@ void main(void) {
 
         let scriptNode = this._audioContext.createScriptProcessor(samplesPerPacket, 0, channels);
 
-        this._ticket = setInterval(() => {
-          if (this.isStateRunning()) {
-            return;
-          }
-
-          this._player.getPCMData(false);
-        }, Math.floor(samplesPerPacket * 1000 / samplerate));
-
         scriptNode.onaudioprocess = audioProcessingEvent => {
           let outputBuffer = audioProcessingEvent.outputBuffer; //  this._player._logger.info('AudioPlayer', `onaudioprocess callback ${outputBuffer.sampleRate}`);
 
-          let pcmpacket = this._player.getPCMData(true);
+          let pcmpacket = this._pcmlist.shift();
 
           if (!pcmpacket) {
             //      this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
@@ -2681,7 +2633,7 @@ void main(void) {
 
           for (let i = 0; i < this._channels; i++) {
             let b = pcmpacket.datas[i];
-            let nowBuffering = outputBuffer.getChannelData(i); //  this._player._logger.info('AudioPlayer', `onaudioprocess callback outputBuffer[${i}] length ${nowBuffering.length}`);
+            let nowBuffering = outputBuffer.getChannelData(i); // this._player._logger.info('AudioPlayer', `onaudioprocess callback outputBuffer[${i}] length ${nowBuffering.length}`);
 
             for (let i = 0; i < this._samplesPerPacket; i++) {
               nowBuffering[i] = b[i] || 0;
@@ -2717,6 +2669,7 @@ void main(void) {
 
         this.setVolume(0);
         this.audioEnabled(false);
+        this._pcmlist = [];
       }
 
       unMute() {
@@ -2767,6 +2720,14 @@ void main(void) {
         return this._audioContext.state === 'suspended';
       }
 
+      pushPcmData(pcmpacket) {
+        if (!this.isStateRunning()) {
+          return;
+        }
+
+        this._pcmlist.push(pcmpacket);
+      }
+
       pause() {
         this._playing = false;
       }
@@ -2802,6 +2763,7 @@ void main(void) {
 
         this._playing = false;
         this._init = false;
+        this._pcmlist = [];
 
         this._player._logger.info('AudioPlayer', 'AudioPlayer clear resouce');
       }
@@ -2835,7 +2797,7 @@ void main(void) {
       decoderMode: "normal"
     };
 
-    class AVPlayer extends EventEmitter {
+    class AVPlayer extends eventemitter3 {
       _options = undefined;
       _render = undefined;
       _logger = undefined;
@@ -2919,20 +2881,17 @@ void main(void) {
 
           this._audioplayer.setAudioInfo(atype, sampleRate, channels, samplesPerPacket);
         });
-      }
 
-      getPCMData(trust) {
-        let pcmpacket = this._mediacenter.getPCMData(trust);
-
-        if (pcmpacket) {
+        this._mediacenter.on('pcmdata', pcmpacket => {
           this._pcmframerate++;
 
           for (let data of pcmpacket.datas) {
             this._pcmbitrate += data.length;
-          }
-        }
+          } //     this._logger.info('player', `decoder yuvdata ${yuvpacket.data.length} ts ${yuvpacket.timestamp} width:${yuvpacket.width} height:${yuvpacket.height}`);
 
-        return pcmpacket;
+
+          this._audioplayer.pushPcmData(pcmpacket);
+        });
       }
 
       destroy() {

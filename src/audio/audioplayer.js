@@ -1,4 +1,4 @@
-import EventEmitter from "../utils/events";
+import EventEmitter from 'eventemitter3';
 import { clamp } from "../utils";
 
 class AudioPlayer extends EventEmitter {
@@ -14,7 +14,7 @@ class AudioPlayer extends EventEmitter {
     _channels = 0;
     _samplesPerPacket = 0;
 
-    _ticket = undefined;
+    _pcmlist = [];
 
     _init = false;
 
@@ -50,26 +50,13 @@ class AudioPlayer extends EventEmitter {
         
         let scriptNode = this._audioContext.createScriptProcessor(samplesPerPacket, 0, channels);
 
-        this._ticket = setInterval(() => {
-
-            if (this.isStateRunning()) {
-
-                return;
-            }
-
-            this._player.getPCMData(false);
-
-
-            
-        }, Math.floor(samplesPerPacket*1000/samplerate));
-
         scriptNode.onaudioprocess = (audioProcessingEvent) => {
 
             let outputBuffer = audioProcessingEvent.outputBuffer;
 
           //  this._player._logger.info('AudioPlayer', `onaudioprocess callback ${outputBuffer.sampleRate}`);
 
-          let pcmpacket = this._player.getPCMData(true);
+          let pcmpacket = this._pcmlist.shift();
 
             if (!pcmpacket) {
 
@@ -88,7 +75,7 @@ class AudioPlayer extends EventEmitter {
             for (let i = 0; i < this._channels; i++) {
                 let b = pcmpacket.datas[i];
                 let nowBuffering = outputBuffer.getChannelData(i);
-              //  this._player._logger.info('AudioPlayer', `onaudioprocess callback outputBuffer[${i}] length ${nowBuffering.length}`);
+               // this._player._logger.info('AudioPlayer', `onaudioprocess callback outputBuffer[${i}] length ${nowBuffering.length}`);
                 for (let i = 0; i < this._samplesPerPacket; i++) {
                     nowBuffering[i] = b[i] || 0;
                 }
@@ -117,7 +104,6 @@ class AudioPlayer extends EventEmitter {
     }
 
 
-
     mute() {
 
         if (!this._init) {
@@ -127,6 +113,8 @@ class AudioPlayer extends EventEmitter {
 
         this.setVolume(0);
         this.audioEnabled(false);
+
+        this._pcmlist = [];
     }
 
     unMute() {
@@ -179,6 +167,16 @@ class AudioPlayer extends EventEmitter {
         return this._audioContext.state === 'suspended';
     }
 
+    pushPcmData(pcmpacket) {
+
+        if (!this.isStateRunning()) {
+
+            return;
+        }
+
+        this._pcmlist.push(pcmpacket);
+    }
+
 
     pause() {
 
@@ -217,6 +215,7 @@ class AudioPlayer extends EventEmitter {
 
         this._playing = false;
         this._init = false;
+        this._pcmlist = [];
 
         this._player._logger.info('AudioPlayer', 'AudioPlayer clear resouce');
     }
