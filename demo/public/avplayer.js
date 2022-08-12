@@ -2622,10 +2622,9 @@ void main(void) {
             //      this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
             for (let i = 0; i < this._channels; i++) {
               let nowBuffering = outputBuffer.getChannelData(i);
-
-              for (let i = 0; i < this._samplesPerPacket; i++) {
-                nowBuffering[i] = 0;
-              }
+              nowBuffering.fill(0, 0); // for (let i = 0; i < this._samplesPerPacket; i++) {
+              //     nowBuffering[i] = 0;
+              // }
             }
 
             return;
@@ -2634,10 +2633,11 @@ void main(void) {
           for (let i = 0; i < this._channels; i++) {
             let b = pcmpacket.datas[i];
             let nowBuffering = outputBuffer.getChannelData(i); // this._player._logger.info('AudioPlayer', `onaudioprocess callback outputBuffer[${i}] length ${nowBuffering.length}`);
+            // for (let i = 0; i < this._samplesPerPacket; i++) {
+            //     nowBuffering[i] = b[i] || 0;
+            // }
 
-            for (let i = 0; i < this._samplesPerPacket; i++) {
-              nowBuffering[i] = b[i] || 0;
-            }
+            b.copyWithin(nowBuffering, 0);
           }
         };
 

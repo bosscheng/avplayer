@@ -411,7 +411,7 @@
 	    Module["HEAPF64"] = HEAPF64 = new Float64Array(buf);
 	  }
 
-	  Module["INITIAL_MEMORY"] || 536870912;
+	  Module["INITIAL_MEMORY"] || 134217728;
 	  var wasmTable;
 	  var __ATPRERUN__ = [];
 	  var __ATINIT__ = [];
@@ -7183,9 +7183,7 @@
 	    this._demuxer.on('audiodata', packet => {
 	      this._aframerate++;
 	      this._abitrate += packet.payload.length;
-	      packet.timestamp = this.adjustTime(packet.timestamp);
-
-	      this._jitterBuffer.pushAudio(packet);
+	      return;
 	    });
 
 	    this._jitterBuffer.on('videopacket', packet => {
@@ -7264,14 +7262,7 @@
 
 	    let data = Uint8Array.from(out);
 	    this._yuvframerate++;
-	    this._yuvbitrate += data.length;
-	    postMessage({
-	      cmd: WORKER_EVENT_TYPE.yuvData,
-	      data,
-	      width: this._width,
-	      height: this._height,
-	      timestamp
-	    }, [data.buffer]);
+	    this._yuvbitrate += data.length; //  postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
 	  }
 
 	  audioInfo(atype, sampleRate, channels) {

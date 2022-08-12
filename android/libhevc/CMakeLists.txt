@@ -120,7 +120,7 @@ list(
 
 set(LIBHEVCDEC_INCLUDES ${HEVC_ROOT}/common ${HEVC_ROOT}/decoder)
 
-set(LIBHEVCDEC_X86_C_FLAGS "-DX86 -DDISABLE_AVX2 -msse4.2 -mno-avx \
+set(LIBHEVCDEC_X86_C_FLAGS "-DX86 -DDISABLE_AVX2 -msse4.2 \
   -DDEFAULT_ARCH=D_ARCH_X86_SSE42 -DMULTICORE -O3 -msimd128 -flto")
 set(LIBHEVCDEC_X86_INCLUDES ${HEVC_ROOT}/common/x86 ${HEVC_ROOT}/decoder/x86)
 set(LIBHEVCDEC_C_FLAGS "${LIBHEVCDEC_X86_C_FLAGS}")
@@ -133,6 +133,5 @@ set_target_properties(libhevcdec
 list(APPEND HEVCDEC_SRCS "${HEVC_ROOT}/test/decoder/main.c")
 
 add_executable(hevcdec ${HEVCDEC_SRCS})
-set_target_properties(hevcdec PROPERTIES COMPILE_FLAGS "-DMD5_DISABLE \
-  -DPROFILE_ENABLE")
+set_target_properties(hevcdec PROPERTIES COMPILE_FLAGS "-DMD5_DISABLE")
 target_link_libraries(hevcdec libhevcdec Threads::Threads)
