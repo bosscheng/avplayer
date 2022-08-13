@@ -91,7 +91,6 @@ class WorkerCore {
                 audio gen framerate:${this._aframerate/diff} bitrate:${this._abitrate*8/diff}
                 yuv   gen framerate:${this._yuvframerate/diff} bitrate:${this._yuvbitrate*8/diff}
                 pcm   gen framerate:${this._pcmframerate/diff} bitrate:${this._pcmbitrate*8/diff}
-                packet buffer left count ${this._gop.length}
                 `);
 
                 this._vframerate = 0;
@@ -153,6 +152,7 @@ class WorkerCore {
             this._vframerate++;
             this._vbitrate += packet.payload.length;
 
+
             packet.timestamp = this.adjustTime(packet.timestamp);
 
             this._jitterBuffer.pushVideo(packet);
@@ -165,6 +165,7 @@ class WorkerCore {
             this._abitrate += packet.payload.length;
 
             packet.timestamp = this.adjustTime(packet.timestamp);
+
             this._jitterBuffer.pushAudio(packet);
         })
 
@@ -284,7 +285,7 @@ class WorkerCore {
 
             let diff = timestamp - this._lastts;
 
-            if (diff < -1000) {
+            if (diff < -3000) {
 
                 this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
 
@@ -293,7 +294,7 @@ class WorkerCore {
 
 
 
-            } else if (diff > 1000) {
+            } else if (diff > 3000) {
 
                this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 
@@ -328,7 +329,6 @@ class WorkerCore {
 
             this._pcmbitrate += datas[i].length*4;
         }
-
 
         if (!this._useSpliteBuffer) {
 

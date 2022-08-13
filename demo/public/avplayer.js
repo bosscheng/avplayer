@@ -2622,9 +2622,7 @@ void main(void) {
             //      this._player._logger.warn('AudioPlayer', `audio buffer is empty`);
             for (let i = 0; i < this._channels; i++) {
               let nowBuffering = outputBuffer.getChannelData(i);
-              nowBuffering.fill(0, 0); // for (let i = 0; i < this._samplesPerPacket; i++) {
-              //     nowBuffering[i] = 0;
-              // }
+              nowBuffering.fill(0, 0);
             }
 
             return;
@@ -2637,7 +2635,7 @@ void main(void) {
             //     nowBuffering[i] = b[i] || 0;
             // }
 
-            b.copyWithin(nowBuffering, 0);
+            nowBuffering.set(b);
           }
         };
 

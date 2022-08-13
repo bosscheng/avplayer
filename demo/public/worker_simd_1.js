@@ -153,9 +153,9 @@
 	  var err = Module["printErr"] || console.warn.bind(console);
 	  Object.assign(Module, moduleOverrides);
 	  moduleOverrides = null;
-	  if (Module["arguments"]) ;
+	  if (Module["arguments"]) Module["arguments"];
 	  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-	  if (Module["quit"]) ;
+	  if (Module["quit"]) Module["quit"];
 	  var POINTER_SIZE = 4;
 
 	  var wasmBinary;
@@ -5706,13 +5706,7 @@
 	}
 
 	function caculateSamplesPerPacket(sampleRate) {
-	  if (sampleRate >= 44100) {
-	    return 1024;
-	  } else if (sampleRate >= 22050) {
-	    return 512;
-	  } else {
-	    return 256;
-	  }
+	  return 1024;
 	}
 
 	class Logger {
@@ -6686,7 +6680,7 @@
 	                packet.payload = vframe; //convertAVCCtoAnnexB(vframe);
 
 	                packet.iskeyframe = true;
-	                packet.timestamp = this._pts;
+	                packet.timestamp = this._dts;
 	                packet.avtype = AVType.Video; // packet.nals = SplitBufferToNals(vframe);
 
 	                this.emit('videodata', packet);
@@ -6699,7 +6693,7 @@
 	                packet.payload = vframe; //convertAVCCtoAnnexB(vframe);
 
 	                packet.iskeyframe = false;
-	                packet.timestamp = this._pts;
+	                packet.timestamp = this._dts;
 	                packet.avtype = AVType.Video; // packet.nals = SplitBufferToNals(vframe);
 
 	                this.emit('videodata', packet);
@@ -6884,7 +6878,7 @@
 	    this._player = player;
 	    this._statisticTimer = setInterval(() => {
 	      this._player._logger.info('jitterbuffer', `video packet ${this._vgop.length} audio packet ${this._agop.length}`);
-	    }, 2000);
+	    }, 1000);
 	    let sec = 10; // 100 fps
 
 	    this._playTimer = setInterval(() => {
@@ -6921,6 +6915,10 @@
 	  }
 
 	  playTicket() {
+	    if (this._status != JitterBufferStatus.bufferReady) {
+	      return;
+	    }
+
 	    let now = new Date().getTime();
 
 	    while (1) {
@@ -7130,7 +7128,6 @@
                 audio gen framerate:${this._aframerate / diff} bitrate:${this._abitrate * 8 / diff}
                 yuv   gen framerate:${this._yuvframerate / diff} bitrate:${this._yuvbitrate * 8 / diff}
                 pcm   gen framerate:${this._pcmframerate / diff} bitrate:${this._pcmbitrate * 8 / diff}
-                packet buffer left count ${this._gop.length}
                 `);
 
 	      this._vframerate = 0;
@@ -7183,7 +7180,9 @@
 	    this._demuxer.on('audiodata', packet => {
 	      this._aframerate++;
 	      this._abitrate += packet.payload.length;
-	      return;
+	      packet.timestamp = this.adjustTime(packet.timestamp);
+
+	      this._jitterBuffer.pushAudio(packet);
 	    });
 
 	    this._jitterBuffer.on('videopacket', packet => {
@@ -7262,13 +7261,20 @@
 
 	    let data = Uint8Array.from(out);
 	    this._yuvframerate++;
-	    this._yuvbitrate += data.length; //  postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
+	    this._yuvbitrate += data.length;
+	    postMessage({
+	      cmd: WORKER_EVENT_TYPE.yuvData,
+	      data,
+	      width: this._width,
+	      height: this._height,
+	      timestamp
+	    }, [data.buffer]);
 	  }
 
 	  audioInfo(atype, sampleRate, channels) {
 	    this._sampleRate = sampleRate;
 	    this._channels = channels;
-	    this._samplesPerPacket = caculateSamplesPerPacket(sampleRate);
+	    this._samplesPerPacket = caculateSamplesPerPacket();
 	    postMessage({
 	      cmd: WORKER_EVENT_TYPE.audioInfo,
 	      atype,
@@ -7285,12 +7291,12 @@
 	    } else {
 	      let diff = timestamp - this._lastts;
 
-	      if (diff < -1000) {
+	      if (diff < -3000) {
 	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
 
 	        this._curpts -= 25;
 	        this._lastts = timestamp;
-	      } else if (diff > 1000) {
+	      } else if (diff > 3000) {
 	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 
 	        this._curpts += diff;

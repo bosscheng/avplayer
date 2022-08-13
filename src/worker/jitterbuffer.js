@@ -34,7 +34,7 @@ class JitterBuffer extends EventEmitter {
 
             this._player._logger.info('jitterbuffer', `video packet ${this._vgop.length} audio packet ${this._agop.length}`);
             
-          }, 2000);
+          }, 1000);
 
 
         let sec = 10; // 100 fps
@@ -80,6 +80,11 @@ class JitterBuffer extends EventEmitter {
 
 
     playTicket() {
+
+        if (this._status != JitterBufferStatus.bufferReady) {
+
+            return;
+        }
 
         let now = new Date().getTime();
 

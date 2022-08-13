@@ -66,10 +66,6 @@ class AudioPlayer extends EventEmitter {
 
                     let nowBuffering = outputBuffer.getChannelData(i);
                     nowBuffering.fill(0, 0);
-                    
-                    // for (let i = 0; i < this._samplesPerPacket; i++) {
-                    //     nowBuffering[i] = 0;
-                    // }
                 }
                 return;
             }
@@ -82,8 +78,8 @@ class AudioPlayer extends EventEmitter {
                 //     nowBuffering[i] = b[i] || 0;
                 // }
 
-                b.copyWithin(nowBuffering, 0);
-                
+                nowBuffering.set(b);
+               
             }
       
         }
