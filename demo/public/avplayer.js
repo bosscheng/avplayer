@@ -2865,6 +2865,8 @@ void main(void) {
 
         this._mediacenter.on('videoinfo', (vtype, width, height) => {
           this._logger.info('player', `mediacenter video info vtype ${vtype} width ${width} height ${height}`);
+
+          this.emit('videoinfo', vtype, width, height);
         });
 
         this._mediacenter.on('yuvdata', yuvpacket => {
@@ -2878,6 +2880,8 @@ void main(void) {
           this._logger.info('player', `mediacenter audio info atype ${atype} sampleRate ${sampleRate} channels ${channels}  samplesPerPacket ${samplesPerPacket}`);
 
           this._audioplayer.setAudioInfo(atype, sampleRate, channels, samplesPerPacket);
+
+          this.emit('audioinfo', atype, sampleRate, channels);
         });
 
         this._mediacenter.on('pcmdata', pcmpacket => {
