@@ -18,7 +18,8 @@
             <option value="cube">立方体</option>
         </select>
         <select id="decodermode">
-            <option value="simd">支持SIMD解码</option>
+            <option value="simd">SIMD解码</option>
+            <option value="simd_1">SIMD-BDE解码</option>
             <option value="normal">正常解码</option>
         </select>
         <select id="playmode">
@@ -27,15 +28,22 @@
         </select>
         <!-- <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" /> -->
         <!-- <input id="address" type="text" style="width: 300px;"value="https://flv.bdplay.nodemedia.cn/live/bbb_265.flv" /> -->
-        <!-- <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" /> -->
         <!-- <input id="address" type="text" style="width: 300px;"value="http://192.168.6.18:8080/live/a123456.flv" /> -->
-        <input id="address" type="text" style="width: 300px;"value="http://172.105.18.200:2080/live/test121.live.flv" />
+        <!-- <input id="address" type="text" style="width: 300px;"value="http://172.105.18.200:2080/live/test121.live.flv" /> -->
+        <input id="address" type="text" style="width: 300px;"value="http://172.105.18.200:2080/live/test2652k.live.flv" />
+
 
         <button id="play" type="button">播放</button>
         <button id="stop" type="button">停止</button>
     </div>
     <div>
         <label id="fps">FPS 0</label>
+    </div>
+    <div>
+        <label id="video"></label>
+    </div>
+    <div>
+        <label id ="audio"></label>
     </div>
     <div id="container" style="position: relative;">
         <!-- <video id="video" src="./flower.mp4" with=800 height=1000 autoplay=true loop  playsinline=true muted=true></video> -->
@@ -58,6 +66,8 @@ function main() {
     let decoderCtrl = document.getElementById("decodermode");
     let playCtrl = document.getElementById("playmode");
     let fpslabel = document.getElementById("fps");
+    let videolabel = document.getElementById("video");
+    let audiolabel = document.getElementById("audio");
 
 
     let player = undefined;
@@ -78,7 +88,7 @@ function main() {
        let options = {
             container: $container,
             url:addrinput.value,
-            delay:2000,
+            delay:1000,
             width:1280,
             height:720,
             renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value,
@@ -92,7 +102,27 @@ function main() {
 
         player.on('fps', (fps) => {
 
-            fpslabel.innerText = `FPS ${fps}`;
+            fpslabel.innerText = `FPS ${fps.toFixed(1)}`;
+        })
+
+        player.on('videoinfo', (vtype, width, height) => {
+
+            videolabel.innerText = `VideoCodec: ${vtype === 1 ? 'H264' : 'H265'} Width: ${width} Height: ${height}`;
+        })
+
+        player.on('audioinfo', (atype, sampleRate, channels) => {
+
+            let acodec = 'PCM';
+
+            if (atype === 2) {
+                acodec = 'PCMA';
+            } else if (atype === 4) {
+                acodec = 'PCMU';
+            } else if (atype === 8) {
+                acodec = 'AAC';
+            }
+
+            audiolabel.innerText = `AudioCodec: ${acodec} SampleRate: ${sampleRate} Channels: ${channels}`;
         })
 
     };
@@ -152,8 +182,8 @@ main();
 
 
 </script>
-<script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
+<!-- <script src="https://unpkg.com/vconsole@latest/dist/vconsole.min.js"></script>
 <script>
   // VConsole 默认会挂载到 `window.VConsole` 上
   var vConsole = new window.VConsole();
-</script>
+</script> -->

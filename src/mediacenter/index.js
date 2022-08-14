@@ -1,14 +1,13 @@
 import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE, AVType} from '../constant'
-import EventEmitter from '../utils/events.js';
-import JitterBuffer from './jitterbuffer';
+import EventEmitter from 'eventemitter3';
 
 class MediaCenter extends EventEmitter  {
 
 
     _mediacenterWorker = undefined;
     _player;
-    _jitterBuffer = undefined;
 
+    _isDestoryed = false;
 
     constructor (player) {
 
@@ -16,17 +15,27 @@ class MediaCenter extends EventEmitter  {
 
         this._player = player;
 
-        this._player._logger.info('mediacenter', `start worker thread ${player._options.decoder}`);
+        this._player._logger.info('mediacenter', `start worker thread ${player._options.decoderMode}`);
 
         let workerfile = '';
 
         if (player._options.decoderMode === 'normal') {
 
             workerfile = 'worker.js';
-        } else {
+
+        } else if (player._options.decoderMode === 'simd') {
 
             workerfile = 'worker_simd.js';
+
+        } else if (player._options.decoderMode === 'simd_1') {
+
+            workerfile = 'worker_simd_1.js';
+        } else {
+
+            this._player._logger.console.error();('mediacenter', `decoderMode not support ${player._options.decoderMode}`);
+            return;
         }
+
 
         this._mediacenterWorker = new Worker(workerfile);
 
@@ -58,14 +67,12 @@ class MediaCenter extends EventEmitter  {
 
                 case WORKER_EVENT_TYPE.reseted: {
 
-                    this._jitterBuffer.reset();
                     break;
                 }
 
                 case WORKER_EVENT_TYPE.destroyed: {
 
                     this._mediacenterWorker.terminate();
-                     this._jitterBuffer.destroy();
                     break;
                 }
 
@@ -73,15 +80,26 @@ class MediaCenter extends EventEmitter  {
 
                     this.emit('videoinfo', msg.vtype, msg.width, msg.height);
 
-                //    this._jitterBuffer.playVideoOnly();
                     break;
                 }
 
                     
                 case WORKER_EVENT_TYPE.yuvData: {
 
-                    this._jitterBuffer.pushYUVData(msg.data, msg.timestamp, msg.width, msg.height);
-                
+                    if(this._isDestoryed) {
+
+                        return;
+                    }
+
+                    let packet = {
+
+                        data:msg.data, 
+                        timestamp:msg.timestamp, 
+                        width:msg.width, 
+                        height:msg.height
+                    }
+
+                    this.emit('yuvdata', packet);
                     break;
                 }
 
@@ -94,7 +112,19 @@ class MediaCenter extends EventEmitter  {
 
                 case WORKER_EVENT_TYPE.pcmData: {
 
-                    this._jitterBuffer.pushPCMData(msg.datas, msg.timestamp);
+                    if(this._isDestoryed) {
+
+                        return;
+                    }
+
+                    let packet = {
+
+                        datas:msg.datas, 
+                        timestamp:msg.timestamp, 
+       
+                    }
+
+                    this.emit('pcmdata', packet);
                     break;
 
                 }
@@ -109,28 +139,16 @@ class MediaCenter extends EventEmitter  {
 
         };
 
-        this._jitterBuffer = new JitterBuffer(player);
-
-        this._jitterBuffer.on('yuvdata', (yuvpacket) => {
-
-            this.emit('yuvdata', yuvpacket);
-
-        })
 
     }
 
     destroy() {
 
         this.off();
+        this._isDestoryed = true;
         this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.destroy});
-
         this._player._logger.info('MediaCenter', 'MediaCenter destroy');
  
-    }
-
-    getPCMData(trust) {
-      
-      return this._jitterBuffer.getPCMData(trust);
     }
 
 }

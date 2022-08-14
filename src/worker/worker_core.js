@@ -10,6 +10,7 @@ import { caculateSamplesPerPacket } from '../utils';
 import Logger from '../utils/logger.js';
 import FLVDemuxer from '../demuxer/flvdemuxer.js';
 import FetchStream from '../stream/fetchstream.js';
+import JitterBuffer from './jitterbuffer';
 
 
 class WorkerCore {
@@ -28,8 +29,7 @@ class WorkerCore {
 
     _gop = [];
 
-    _timer = undefined;
-    _statistic = undefined;
+    _lastStatTs = undefined;
 
     _useSpliteBuffer = false;
     _spliteBuffer = undefined;
@@ -56,6 +56,8 @@ class WorkerCore {
 
     _Module = undefined;
 
+    _jitterBuffer = undefined;
+
 
     constructor(options, Module) {
 
@@ -71,45 +73,37 @@ class WorkerCore {
 
         this._demuxer = new FLVDemuxer(this);     // demux stream to h264/h265 aac/pcmu/pcma
         this._stream = new FetchStream(this); //get strem from remote
+        this._jitterBuffer = new JitterBuffer(this);
 
         this.registerEvents();
 
         this._stream.start();
 
 
-    this._timer = setInterval(() => {
+        this._lastStatTs = new Date().getTime();
+        this._stattimer = setInterval(() => {
+                let now = new Date().getTime();
+                let diff = (now - this._lastStatTs)/1000;
+                this._lastStatTs = now;
+                    
+                this._logger.info('WCSTAT', `------ WORKER CORE STAT ${diff} ---------
+                video gen framerate:${this._vframerate/diff} bitrate:${this._vbitrate*8/diff/1024/1024}M
+                audio gen framerate:${this._aframerate/diff} bitrate:${this._abitrate*8/diff}
+                yuv   gen framerate:${this._yuvframerate/diff} bitrate:${this._yuvbitrate*8/diff}
+                pcm   gen framerate:${this._pcmframerate/diff} bitrate:${this._pcmbitrate*8/diff}
+                `);
 
-        let cnt = Math.min(50, this._gop.length);
-        while(cnt>0) {
-            this.handleTicket();
-            cnt--;
-        }
-        
-        
-    }, 10);
+                this._vframerate = 0;
+                this._vbitrate = 0;
+                this._aframerate = 0;
+                this._abitrate = 0;
 
-    
-    this._stattimer = setInterval(() => {
-            
-        this._logger.info('WCSTAT', `------ WORKER CORE STAT ---------
-        video gen framerate:${this._vframerate/this._statsec} bitrate:${this._vbitrate*8/this._statsec/1024/1024}M
-        audio gen framerate:${this._aframerate/this._statsec} bitrate:${this._abitrate*8/this._statsec}
-        yuv   gen framerate:${this._yuvframerate/this._statsec} bitrate:${this._yuvbitrate*8/this._statsec}
-        pcm   gen framerate:${this._pcmframerate/this._statsec} bitrate:${this._pcmbitrate*8/this._statsec}
-        packet buffer left count ${this._gop.length}
-        `);
+                this._yuvframerate = 0;
+                this._yuvbitrate = 0;
+                this._pcmframerate = 0;
+                this._pcmbitrate = 0;
 
-        this._vframerate = 0;
-        this._vbitrate = 0;
-        this._aframerate = 0;
-        this._abitrate = 0;
-
-        this._yuvframerate = 0;
-        this._yuvbitrate = 0;
-        this._pcmframerate = 0;
-        this._pcmbitrate = 0;
-
-    }, this._statsec*1000);
+            }, this._statsec*1000);
 
 
 
@@ -125,8 +119,8 @@ class WorkerCore {
 
         this._stream.on('retry', () => {
 
-        this.reset();
-        postMessage({cmd: WORKER_EVENT_TYPE.reseted});
+            this.reset();
+            postMessage({cmd: WORKER_EVENT_TYPE.reseted});
 
         });
 
@@ -140,6 +134,7 @@ class WorkerCore {
 
             this._logger.info('WorkerCore', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
+
             this._vDecoder.setCodec(videoinfo.vtype, videoinfo.extradata);
         })
 
@@ -150,7 +145,6 @@ class WorkerCore {
 
             this._aDecoder.setCodec(audioinfo.atype, audioinfo.extradata);
 
-            
         })
 
         this._demuxer.on('videodata', (packet) => {
@@ -158,7 +152,10 @@ class WorkerCore {
             this._vframerate++;
             this._vbitrate += packet.payload.length;
 
-            this.decodeVideo(packet.payload, packet.timestamp, packet.iskeyframe)
+
+            packet.timestamp = this.adjustTime(packet.timestamp);
+
+            this._jitterBuffer.pushVideo(packet);
 
         })
 
@@ -167,7 +164,19 @@ class WorkerCore {
             this._aframerate++;
             this._abitrate += packet.payload.length;
 
-        this.decodeAudio(packet.payload, packet.timestamp);
+            packet.timestamp = this.adjustTime(packet.timestamp);
+
+            this._jitterBuffer.pushAudio(packet);
+        })
+
+        this._jitterBuffer.on('videopacket', (packet) => {
+
+            this._vDecoder.decode(packet.payload, packet.iskeyframe ? 1 : 0, packet.timestamp);
+        })
+
+        this._jitterBuffer.on('audiopacket', (packet) => {
+
+            this._aDecoder.decode(packet.payload, packet.timestamp);
         })
 
     }
@@ -183,13 +192,11 @@ class WorkerCore {
         this._aDecoder = undefined;
         this._vDecoder = undefined;
 
-        clearInterval(this._timer);
-        clearInterval(this._statistic);
-
 
         this._stream.destroy();
 
         this._demuxer.destroy();
+        this._jitterBuffer.destroy();
         
         clearInterval(this._stattimer);
 
@@ -217,27 +224,8 @@ class WorkerCore {
         this.samplesPerPacket = 0;
 
         this._demuxer.reset();
+        this._jitterBuffer.reset();
         
-    }
-
-    handleTicket() {
-
-        if (this._gop.length < 1) {
-            return;
-        }
-
-        let avpacket = this._gop.shift();
-
-        if (avpacket.avtype === AVType.Video) {
-
-            this._vDecoder.decode(avpacket.payload, avpacket.iskeyframe ? 1 : 0, avpacket.timestamp);
-
-        } else {
-
-            this._aDecoder.decode(avpacket.payload, avpacket.timestamp);
-
-        }
-
     }
 
     setVideoCodec(vtype, extradata) {
@@ -245,56 +233,9 @@ class WorkerCore {
         this._vDecoder.setCodec(vtype, extradata);
     }
 
-    decodeVideo(videodata, timestamp, keyframe) {
-
-        let avpacket = new AVPacket();
-        avpacket.avtype = AVType.Video;
-        avpacket.payload = videodata;
-        avpacket.timestamp = timestamp,
-        avpacket.iskeyframe = keyframe;
-
-        if (keyframe && this._gop.length > 100000) {
-
-            let bf = false;
-            let i = 0;
-            for (; i < this._gop.length; i++) {
-
-                let avpacket = this._gop[i];
-
-                if (avpacket.avtype === AVType.Video && avpacket.iskeyframe) {
-
-                    bf = true;
-                    break;
-                }
-            }
-
-            if (bf) {
-
-                this._logger.warn('WorkerCore', `packet buffer cache too much, drop ${this._gop.length - i} packet`);
-                this._gop = this._gop.slice(0, i-1);
-            
-            }
-
-        }
-
-        this._gop.push(avpacket);
-    }
-
-
     setAudioCodec(atype, extradata) {
 
         this._aDecoder.setCodec(atype, extradata);
-    }
-
-    decodeAudio(audiodata, timestamp) {
-
-        let avpacket = new AVPacket();
-        avpacket.avtype = AVType.Audio;
-        avpacket.payload = audiodata;
-        avpacket.timestamp = timestamp,
-
-        this._gop.push(avpacket);
-
     }
 
     //callback
@@ -310,9 +251,6 @@ class WorkerCore {
 
     //    this._logger.info('WorkerCore', `yuvdata timestamp ${timestamp}`);
 
-       let nowpts = this.adjustTime(timestamp);
-
-
         let size = this._width*this._height*3/2;
         let out = this._Module.HEAPU8.subarray(yuv, yuv+size);
 
@@ -322,7 +260,7 @@ class WorkerCore {
         this._yuvbitrate += data.length;
 
         
-        postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, nowpts}, [data.buffer]);
+        postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
 
     }
 
@@ -347,20 +285,22 @@ class WorkerCore {
 
             let diff = timestamp - this._lastts;
 
-            if (diff < -1000) {
+            if (diff < -3000) {
+
+                this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
 
                 this._curpts -= 25;
                 this._lastts = timestamp;
 
-                this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
 
-            } else if (diff > 1000) {
 
-                
+            } else if (diff > 3000) {
+
+               this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
+
                 this._curpts += diff;
                 this._lastts = timestamp;
 
-                this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 
             } else {
 
@@ -378,9 +318,6 @@ class WorkerCore {
     pcmData(pcmDataArray, samples, timestamp) {
 
     //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
-
-        let nowpts = this.adjustTime(timestamp);
-
         let datas = [];
 
         this._pcmframerate++;
@@ -393,12 +330,11 @@ class WorkerCore {
             this._pcmbitrate += datas[i].length*4;
         }
 
-
         if (!this._useSpliteBuffer) {
 
             if(samples === this._samplesPerPacket) {
 
-                postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, nowpts}, datas.map(x => x.buffer));
+                postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, timestamp}, datas.map(x => x.buffer));
 
                 return;
             }
@@ -407,7 +343,7 @@ class WorkerCore {
             this._useSpliteBuffer = true;
         } 
 
-        this._spliteBuffer.addBuffer(datas, nowpts);
+        this._spliteBuffer.addBuffer(datas, timestamp);
 
         this._spliteBuffer.splite((buffers, ts) => {
 

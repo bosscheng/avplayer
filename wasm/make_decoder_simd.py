@@ -10,7 +10,7 @@ args = {'-o': '../src/decoder/decoder_simd'}
 
 sargs = {
     'WASM': 1,
-    'TOTAL_MEMORY': 67108864*8,
+    'TOTAL_MEMORY': 128*1024*1024,
     'ASSERTIONS': 0,
     'ERROR_ON_UNDEFINED_SYMBOLS': 0,
     'DISABLE_EXCEPTION_CATCHING': 1,
@@ -25,7 +25,7 @@ emcc_args = [
     # '--closure', '1',
     # '--llvm-lto','1',
     '-lembind',
-    '-I.', '-Ithirdparty/android', '-Ithirdparty/android/include', '-Ithirdparty/ffmpeg/include',
+    '-I.', '-Isrc/common', '-Ithirdparty/android/include', '-Ithirdparty/ffmpeg/include',
     '--post-js','./post.js',
     '-msimd128',
     '-flto'
@@ -35,7 +35,7 @@ print ('building...')
 
 emcc_args = ['thirdparty/android/lib/libavcdec-simd.a', 'thirdparty/android/lib/libhevcdec-simd.a', 'thirdparty/ffmpeg/lib/libavcodec.a','thirdparty/ffmpeg/lib/libavutil.a','thirdparty/ffmpeg/lib/libswresample.a']+emcc_args
 
-os.system('emcc ./src/decoder_simd/decoder.cpp ./thirdparty/android/log.c ./thirdparty/android/deocdervideo.cpp ./thirdparty/android/decoderavc.cpp ./thirdparty/android/decoderhevc.cpp ' +
+os.system('emcc ./src/decoder_simd/decoder.cpp ./src/common/log.c ./src/common/deocdervideo.cpp ./src/common/decoder_avc_android.cpp ./src/common/decoder_hevc_android.cpp ' +
           (' '.join(emcc_args)) + ' -o '+args['-o']+'.js')
 
 print ('done')

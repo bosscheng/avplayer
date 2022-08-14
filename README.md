@@ -43,7 +43,7 @@
         cd Android/libavc
         mkdir build
         cd build
-        emcmake cmake ..
+        emcmake cmake -DCMAKE_BUILD_TYPE=RELEASE ..
         emmake make       
 
     (2) libhevc（h265），从google android下载代码（在android的工程的external里），使用分支 android-mainline-12.0.0_r126 （在原有的 CMakeLists.txt上加入编译项 -O3  -msimd128）, 本工程里的代码已经配置好了
@@ -52,7 +52,7 @@
         cd Android/libhevc
         mkdir build
         cd build
-        emcmake cmake ..
+        emcmake cmake -DCMAKE_BUILD_TYPE=RELEASE ..
         emmake make    
 
     (3) 编译SIMD decoder wasm库 
@@ -60,6 +60,24 @@
         先进入emcc容器
         cd wasm
         python3 make_decoder_simd.py
+
+
+# 编译支持SIMD解码wasm ，使用libde265的解码库
+
+    (1) libde265（h265）
+
+        先进入emcc容器
+        cd libde265
+        mkdir build
+        cd build
+        emcmake cmake -DCMAKE_BUILD_TYPE=RELEASE ..
+        emmake make    
+
+    (2) 编译SIMD decoder wasm库 
+
+        先进入emcc容器
+        cd wasm
+        python3 make_decoder_simd_1.py    
 
 # 工程打包
    

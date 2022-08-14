@@ -1,4 +1,4 @@
-import EventEmitter from '../utils/events.js';
+import EventEmitter from 'eventemitter3';
 import { readAACSpecificConfig, getAACProfileName, readAVCSpecificConfig, getAVCProfileName } from '../utils/specific.js';
 import {AVPacket, VideoInfo, AudioInfo} from '../utils/av.js';
 import {AVType, VideoType, AudioType, PixelType, ADTS_HEADER_SIZE, AAC_SAMPLE_RATE, AACProfile} from '../constant'
@@ -214,7 +214,7 @@ class FLVDemuxer extends EventEmitter {
                                 let packet = new AVPacket();
                                 packet.payload = vframe;//convertAVCCtoAnnexB(vframe);
                                 packet.iskeyframe = true;
-                                packet.timestamp = this._pts;
+                                packet.timestamp = this._dts;
                                 packet.avtype = AVType.Video;
                                // packet.nals = SplitBufferToNals(vframe);
             
@@ -237,7 +237,7 @@ class FLVDemuxer extends EventEmitter {
                                 let packet = new AVPacket();
                                 packet.payload = vframe;//convertAVCCtoAnnexB(vframe);
                                 packet.iskeyframe = false;
-                                packet.timestamp = this._pts;
+                                packet.timestamp = this._dts;
                                 packet.avtype = AVType.Video;
                                 // packet.nals = SplitBufferToNals(vframe);
 

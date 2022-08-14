@@ -4,8 +4,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "decoderavc.h"
-#include "decoderhevc.h"
+#include "decoder_avc_android.h"
+#include "decoder_hevc_android.h"
 
 using namespace emscripten;
 using namespace std;
@@ -266,7 +266,7 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
         case Video_H264: {
 
             parseAVCExtraData((u8*)extra.data(), extra.length());
-            mDecoderV = new DecoderAVC(this);
+            mDecoderV = new Decoder_AVC_Android(this);
 
 
             break;
@@ -275,7 +275,7 @@ void VideoDecoder::setCodec(u32 vtype, string extra)
         case Video_H265: {
 
             parseHEVCExtraData((u8*)extra.data(), extra.length());
-            mDecoderV = new DecoderHEVC(this);
+            mDecoderV = new Decoder_HEVC_Android(this);
             break;
         }
     

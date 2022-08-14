@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/tdcr5/avplayer#readme",
   "dependencies": {
+    "eventemitter3": "^4.0.7",
     "gl-matrix": "^3.4.3"
   },
   "devDependencies": {

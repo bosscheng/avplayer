@@ -1,4 +1,4 @@
-import EventEmitter from '../utils/events.js';
+import EventEmitter from 'eventemitter3';
 
 
 

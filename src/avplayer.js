@@ -3,7 +3,7 @@ import Logger from './utils/logger.js';
 import MediaCenter from './mediacenter/index.js';
 import { PixelType } from './constant/index.js';
 import AudioPlayer from './audio/audioplayer.js';
-import EventEmitter from './utils/events.js';
+import EventEmitter from 'eventemitter3';
 
 const DEFAULT_PLAYER_OPTIONS = {
 
@@ -40,6 +40,7 @@ class AVPlayer extends EventEmitter{
     _pcmbitrate = 0;
     _statsec = 2;
     _stattimer = undefined;
+    _lastStatTs = undefined;
 
 
     constructor(options) {
@@ -63,21 +64,25 @@ class AVPlayer extends EventEmitter{
     
     startStatisc() {
 
+        this._lastStatTs = new Date().getTime();
+
         this._stattimer = setInterval(() => {
+
+            let now = new Date().getTime();
+            let diff = (now - this._lastStatTs)/1000;
+            this._lastStatTs = now;
             
-            this._logger.info('STAT', `------ STAT ---------
-            yuv cosume framerate:${this._yuvframerate/this._statsec} bitrate:${this._yuvbitrate*8/this._statsec}
-            pcm cosume framerate:${this._pcmframerate/this._statsec} bitrate:${this._pcmbitrate*8/this._statsec}
+            this._logger.info('STAT', `------ STAT  ${diff} ---------
+            yuv cosume framerate:${this._yuvframerate/diff} bitrate:${this._yuvbitrate*8/diff}
+            pcm cosume framerate:${this._pcmframerate/diff} bitrate:${this._pcmbitrate*8/diff}
             `);
 
-
-            this.emit('fps', this._yuvframerate/this._statsec);
+            this.emit('fps', this._yuvframerate/diff);
 
             this._yuvframerate = 0;
             this._yuvbitrate = 0;
             this._pcmframerate = 0;
             this._pcmbitrate = 0;
-
 
 
         }, this._statsec*1000);
@@ -105,6 +110,8 @@ class AVPlayer extends EventEmitter{
         this._mediacenter.on('videoinfo', (vtype, width, height) => {
 
             this._logger.info('player', `mediacenter video info vtype ${vtype} width ${width} height ${height}`);
+
+            this.emit('videoinfo', vtype, width, height);
         })
 
         this._mediacenter.on('yuvdata', (yuvpacket) => {
@@ -122,16 +129,12 @@ class AVPlayer extends EventEmitter{
             this._logger.info('player', `mediacenter audio info atype ${atype} sampleRate ${sampleRate} channels ${channels}  samplesPerPacket ${samplesPerPacket}`);
             
             this._audioplayer.setAudioInfo(atype, sampleRate, channels, samplesPerPacket);
+
+            this.emit('audioinfo', atype, sampleRate, channels);
             
         })
 
-    }
-
-    getPCMData(trust)  {
-
-        let pcmpacket = this._mediacenter.getPCMData(trust);
-        
-        if (pcmpacket) {
+        this._mediacenter.on('pcmdata', (pcmpacket) => {
 
             this._pcmframerate++;
 
@@ -139,12 +142,13 @@ class AVPlayer extends EventEmitter{
     
                 this._pcmbitrate += data.length;
             }
+       //     this._logger.info('player', `decoder yuvdata ${yuvpacket.data.length} ts ${yuvpacket.timestamp} width:${yuvpacket.width} height:${yuvpacket.height}`);
 
-        }
+            this._audioplayer.pushPcmData(pcmpacket);
+            
+        })
 
-       return pcmpacket
     }
-
 
     destroy() {
 

@@ -153,9 +153,9 @@
 	  var err = Module["printErr"] || console.warn.bind(console);
 	  Object.assign(Module, moduleOverrides);
 	  moduleOverrides = null;
-	  if (Module["arguments"]) ;
+	  if (Module["arguments"]) Module["arguments"];
 	  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-	  if (Module["quit"]) ;
+	  if (Module["quit"]) Module["quit"];
 	  var POINTER_SIZE = 4;
 
 	  var wasmBinary;
@@ -5706,13 +5706,7 @@
 	}
 
 	function caculateSamplesPerPacket(sampleRate) {
-	  if (sampleRate >= 44100) {
-	    return 512;
-	  } else if (sampleRate >= 22050) {
-	    return 512;
-	  } else {
-	    return 256;
-	  }
+	  return 1024;
 	}
 
 	class Logger {
@@ -5756,77 +5750,343 @@
 
 	}
 
-	class EventEmitter {
-	  on(name, fn, ctx) {
-	    const e = this.e || (this.e = {});
-	    (e[name] || (e[name] = [])).push({
-	      fn,
-	      ctx
-	    });
-	    return this;
-	  }
+	var eventemitter3 = createCommonjsModule(function (module) {
 
-	  once(name, fn, ctx) {
-	    const self = this;
+	var has = Object.prototype.hasOwnProperty
+	  , prefix = '~';
 
-	    function listener() {
-	      self.off(name, listener);
+	/**
+	 * Constructor to create a storage for our `EE` objects.
+	 * An `Events` instance is a plain object whose properties are event names.
+	 *
+	 * @constructor
+	 * @private
+	 */
+	function Events() {}
 
-	      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-	        args[_key] = arguments[_key];
-	      }
+	//
+	// We try to not inherit from `Object.prototype`. In some engines creating an
+	// instance in this way is faster than calling `Object.create(null)` directly.
+	// If `Object.create(null)` is not supported we prefix the event names with a
+	// character to make sure that the built-in object properties are not
+	// overridden or used as an attack vector.
+	//
+	if (Object.create) {
+	  Events.prototype = Object.create(null);
 
-	      fn.apply(ctx, args);
-	    }
-
-	    listener._ = fn;
-	    return this.on(name, listener, ctx);
-	  }
-
-	  emit(name) {
-	    const evtArr = ((this.e || (this.e = {}))[name] || []).slice();
-
-	    for (var _len2 = arguments.length, data = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-	      data[_key2 - 1] = arguments[_key2];
-	    }
-
-	    for (let i = 0; i < evtArr.length; i += 1) {
-	      evtArr[i].fn.apply(evtArr[i].ctx, data);
-	    }
-
-	    return this;
-	  }
-
-	  off(name, callback) {
-	    const e = this.e || (this.e = {});
-
-	    if (!name) {
-	      Object.keys(e).forEach(key => {
-	        delete e[key];
-	      });
-	      delete this.e;
-	      return;
-	    }
-
-	    const evts = e[name];
-	    const liveEvents = [];
-
-	    if (evts && callback) {
-	      for (let i = 0, len = evts.length; i < len; i += 1) {
-	        if (evts[i].fn !== callback && evts[i].fn._ !== callback) liveEvents.push(evts[i]);
-	      }
-	    }
-
-	    if (liveEvents.length) {
-	      e[name] = liveEvents;
-	    } else {
-	      delete e[name];
-	    }
-
-	    return this;
-	  }
-
+	  //
+	  // This hack is needed because the `__proto__` property is still inherited in
+	  // some old browsers like Android 4, iPhone 5.1, Opera 11 and Safari 5.
+	  //
+	  if (!new Events().__proto__) prefix = false;
 	}
+
+	/**
+	 * Representation of a single event listener.
+	 *
+	 * @param {Function} fn The listener function.
+	 * @param {*} context The context to invoke the listener with.
+	 * @param {Boolean} [once=false] Specify if the listener is a one-time listener.
+	 * @constructor
+	 * @private
+	 */
+	function EE(fn, context, once) {
+	  this.fn = fn;
+	  this.context = context;
+	  this.once = once || false;
+	}
+
+	/**
+	 * Add a listener for a given event.
+	 *
+	 * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+	 * @param {(String|Symbol)} event The event name.
+	 * @param {Function} fn The listener function.
+	 * @param {*} context The context to invoke the listener with.
+	 * @param {Boolean} once Specify if the listener is a one-time listener.
+	 * @returns {EventEmitter}
+	 * @private
+	 */
+	function addListener(emitter, event, fn, context, once) {
+	  if (typeof fn !== 'function') {
+	    throw new TypeError('The listener must be a function');
+	  }
+
+	  var listener = new EE(fn, context || emitter, once)
+	    , evt = prefix ? prefix + event : event;
+
+	  if (!emitter._events[evt]) emitter._events[evt] = listener, emitter._eventsCount++;
+	  else if (!emitter._events[evt].fn) emitter._events[evt].push(listener);
+	  else emitter._events[evt] = [emitter._events[evt], listener];
+
+	  return emitter;
+	}
+
+	/**
+	 * Clear event by name.
+	 *
+	 * @param {EventEmitter} emitter Reference to the `EventEmitter` instance.
+	 * @param {(String|Symbol)} evt The Event name.
+	 * @private
+	 */
+	function clearEvent(emitter, evt) {
+	  if (--emitter._eventsCount === 0) emitter._events = new Events();
+	  else delete emitter._events[evt];
+	}
+
+	/**
+	 * Minimal `EventEmitter` interface that is molded against the Node.js
+	 * `EventEmitter` interface.
+	 *
+	 * @constructor
+	 * @public
+	 */
+	function EventEmitter() {
+	  this._events = new Events();
+	  this._eventsCount = 0;
+	}
+
+	/**
+	 * Return an array listing the events for which the emitter has registered
+	 * listeners.
+	 *
+	 * @returns {Array}
+	 * @public
+	 */
+	EventEmitter.prototype.eventNames = function eventNames() {
+	  var names = []
+	    , events
+	    , name;
+
+	  if (this._eventsCount === 0) return names;
+
+	  for (name in (events = this._events)) {
+	    if (has.call(events, name)) names.push(prefix ? name.slice(1) : name);
+	  }
+
+	  if (Object.getOwnPropertySymbols) {
+	    return names.concat(Object.getOwnPropertySymbols(events));
+	  }
+
+	  return names;
+	};
+
+	/**
+	 * Return the listeners registered for a given event.
+	 *
+	 * @param {(String|Symbol)} event The event name.
+	 * @returns {Array} The registered listeners.
+	 * @public
+	 */
+	EventEmitter.prototype.listeners = function listeners(event) {
+	  var evt = prefix ? prefix + event : event
+	    , handlers = this._events[evt];
+
+	  if (!handlers) return [];
+	  if (handlers.fn) return [handlers.fn];
+
+	  for (var i = 0, l = handlers.length, ee = new Array(l); i < l; i++) {
+	    ee[i] = handlers[i].fn;
+	  }
+
+	  return ee;
+	};
+
+	/**
+	 * Return the number of listeners listening to a given event.
+	 *
+	 * @param {(String|Symbol)} event The event name.
+	 * @returns {Number} The number of listeners.
+	 * @public
+	 */
+	EventEmitter.prototype.listenerCount = function listenerCount(event) {
+	  var evt = prefix ? prefix + event : event
+	    , listeners = this._events[evt];
+
+	  if (!listeners) return 0;
+	  if (listeners.fn) return 1;
+	  return listeners.length;
+	};
+
+	/**
+	 * Calls each of the listeners registered for a given event.
+	 *
+	 * @param {(String|Symbol)} event The event name.
+	 * @returns {Boolean} `true` if the event had listeners, else `false`.
+	 * @public
+	 */
+	EventEmitter.prototype.emit = function emit(event, a1, a2, a3, a4, a5) {
+	  var evt = prefix ? prefix + event : event;
+
+	  if (!this._events[evt]) return false;
+
+	  var listeners = this._events[evt]
+	    , len = arguments.length
+	    , args
+	    , i;
+
+	  if (listeners.fn) {
+	    if (listeners.once) this.removeListener(event, listeners.fn, undefined, true);
+
+	    switch (len) {
+	      case 1: return listeners.fn.call(listeners.context), true;
+	      case 2: return listeners.fn.call(listeners.context, a1), true;
+	      case 3: return listeners.fn.call(listeners.context, a1, a2), true;
+	      case 4: return listeners.fn.call(listeners.context, a1, a2, a3), true;
+	      case 5: return listeners.fn.call(listeners.context, a1, a2, a3, a4), true;
+	      case 6: return listeners.fn.call(listeners.context, a1, a2, a3, a4, a5), true;
+	    }
+
+	    for (i = 1, args = new Array(len -1); i < len; i++) {
+	      args[i - 1] = arguments[i];
+	    }
+
+	    listeners.fn.apply(listeners.context, args);
+	  } else {
+	    var length = listeners.length
+	      , j;
+
+	    for (i = 0; i < length; i++) {
+	      if (listeners[i].once) this.removeListener(event, listeners[i].fn, undefined, true);
+
+	      switch (len) {
+	        case 1: listeners[i].fn.call(listeners[i].context); break;
+	        case 2: listeners[i].fn.call(listeners[i].context, a1); break;
+	        case 3: listeners[i].fn.call(listeners[i].context, a1, a2); break;
+	        case 4: listeners[i].fn.call(listeners[i].context, a1, a2, a3); break;
+	        default:
+	          if (!args) for (j = 1, args = new Array(len -1); j < len; j++) {
+	            args[j - 1] = arguments[j];
+	          }
+
+	          listeners[i].fn.apply(listeners[i].context, args);
+	      }
+	    }
+	  }
+
+	  return true;
+	};
+
+	/**
+	 * Add a listener for a given event.
+	 *
+	 * @param {(String|Symbol)} event The event name.
+	 * @param {Function} fn The listener function.
+	 * @param {*} [context=this] The context to invoke the listener with.
+	 * @returns {EventEmitter} `this`.
+	 * @public
+	 */
+	EventEmitter.prototype.on = function on(event, fn, context) {
+	  return addListener(this, event, fn, context, false);
+	};
+
+	/**
+	 * Add a one-time listener for a given event.
+	 *
+	 * @param {(String|Symbol)} event The event name.
+	 * @param {Function} fn The listener function.
+	 * @param {*} [context=this] The context to invoke the listener with.
+	 * @returns {EventEmitter} `this`.
+	 * @public
+	 */
+	EventEmitter.prototype.once = function once(event, fn, context) {
+	  return addListener(this, event, fn, context, true);
+	};
+
+	/**
+	 * Remove the listeners of a given event.
+	 *
+	 * @param {(String|Symbol)} event The event name.
+	 * @param {Function} fn Only remove the listeners that match this function.
+	 * @param {*} context Only remove the listeners that have this context.
+	 * @param {Boolean} once Only remove one-time listeners.
+	 * @returns {EventEmitter} `this`.
+	 * @public
+	 */
+	EventEmitter.prototype.removeListener = function removeListener(event, fn, context, once) {
+	  var evt = prefix ? prefix + event : event;
+
+	  if (!this._events[evt]) return this;
+	  if (!fn) {
+	    clearEvent(this, evt);
+	    return this;
+	  }
+
+	  var listeners = this._events[evt];
+
+	  if (listeners.fn) {
+	    if (
+	      listeners.fn === fn &&
+	      (!once || listeners.once) &&
+	      (!context || listeners.context === context)
+	    ) {
+	      clearEvent(this, evt);
+	    }
+	  } else {
+	    for (var i = 0, events = [], length = listeners.length; i < length; i++) {
+	      if (
+	        listeners[i].fn !== fn ||
+	        (once && !listeners[i].once) ||
+	        (context && listeners[i].context !== context)
+	      ) {
+	        events.push(listeners[i]);
+	      }
+	    }
+
+	    //
+	    // Reset the array, or remove it completely if we have no more listeners.
+	    //
+	    if (events.length) this._events[evt] = events.length === 1 ? events[0] : events;
+	    else clearEvent(this, evt);
+	  }
+
+	  return this;
+	};
+
+	/**
+	 * Remove all listeners, or those of the specified event.
+	 *
+	 * @param {(String|Symbol)} [event] The event name.
+	 * @returns {EventEmitter} `this`.
+	 * @public
+	 */
+	EventEmitter.prototype.removeAllListeners = function removeAllListeners(event) {
+	  var evt;
+
+	  if (event) {
+	    evt = prefix ? prefix + event : event;
+	    if (this._events[evt]) clearEvent(this, evt);
+	  } else {
+	    this._events = new Events();
+	    this._eventsCount = 0;
+	  }
+
+	  return this;
+	};
+
+	//
+	// Alias methods names because people roll like that.
+	//
+	EventEmitter.prototype.off = EventEmitter.prototype.removeListener;
+	EventEmitter.prototype.addListener = EventEmitter.prototype.on;
+
+	//
+	// Expose the prefix.
+	//
+	EventEmitter.prefixed = prefix;
+
+	//
+	// Allow `EventEmitter` to be imported as module namespace.
+	//
+	EventEmitter.EventEmitter = EventEmitter;
+
+	//
+	// Expose the module.
+	//
+	{
+	  module.exports = EventEmitter;
+	}
+	});
 
 	class Bitop {
 	  constructor(buffer) {
@@ -6324,7 +6584,7 @@
 	  TagPayload: 2
 	};
 
-	class FLVDemuxer extends EventEmitter {
+	class FLVDemuxer extends eventemitter3 {
 	  _buffer = undefined;
 	  _needlen = 0;
 	  _state = 0;
@@ -6420,7 +6680,7 @@
 	                packet.payload = vframe; //convertAVCCtoAnnexB(vframe);
 
 	                packet.iskeyframe = true;
-	                packet.timestamp = this._pts;
+	                packet.timestamp = this._dts;
 	                packet.avtype = AVType.Video; // packet.nals = SplitBufferToNals(vframe);
 
 	                this.emit('videodata', packet);
@@ -6433,7 +6693,7 @@
 	                packet.payload = vframe; //convertAVCCtoAnnexB(vframe);
 
 	                packet.iskeyframe = false;
-	                packet.timestamp = this._pts;
+	                packet.timestamp = this._dts;
 	                packet.avtype = AVType.Video; // packet.nals = SplitBufferToNals(vframe);
 
 	                this.emit('videodata', packet);
@@ -6506,7 +6766,7 @@
 
 	}
 
-	class FetchStream extends EventEmitter {
+	class FetchStream extends eventemitter3 {
 	  _player = undefined;
 	  _abort = undefined;
 	  _retryTimer = undefined;
@@ -6593,6 +6853,223 @@
 
 	}
 
+	const JitterBufferStatus = {
+	  notstart: 'notstart',
+	  //未开始
+	  bufferring: 'bufferring',
+	  //开始，等待缓冲满
+	  bufferReady: 'bufferReady' //buffer准备好了，可以播放了
+
+	};
+	const delayScale = 5;
+
+	class JitterBuffer extends eventemitter3 {
+	  _vgop = [];
+	  _agop = [];
+	  _status = JitterBufferStatus.notstart;
+	  _firstpacketts = undefined;
+	  _firstts = undefined;
+	  _player = undefined;
+	  _playTimer = undefined;
+	  _statisticTimer = undefined;
+
+	  constructor(player) {
+	    super();
+	    this._player = player;
+	    this._statisticTimer = setInterval(() => {
+	      this._player._logger.info('jitterbuffer', `video packet ${this._vgop.length} audio packet ${this._agop.length}`);
+	    }, 1000);
+	    let sec = 10; // 100 fps
+
+	    this._playTimer = setInterval(() => {
+	      this.playTicket();
+	    }, sec);
+
+	    this._player._logger.info('jitterbuffer', `start play video timer ${1000 / sec} frames per second, delay ${this._player._options.delay}`);
+	  }
+
+	  reset() {
+	    this._agop = [];
+	    this._vgop = [];
+
+	    if (this._playTimer) {
+	      clearInterval(this._playTimer);
+	      this._playTimer = undefined;
+	    }
+
+	    this._status = JitterBufferStatus.notstart;
+	    this._firstpacketts = undefined;
+	    this._firstts = undefined;
+	  }
+
+	  destroy() {
+	    this.reset();
+
+	    if (this._statisticTimer) {
+	      clearInterval(this._statisticTimer);
+	    }
+
+	    this.off();
+
+	    this._player._logger.info('JitterBuffer', 'JitterBuffer destroy');
+	  }
+
+	  playTicket() {
+	    if (this._status != JitterBufferStatus.bufferReady) {
+	      return;
+	    }
+
+	    let now = new Date().getTime();
+
+	    while (1) {
+	      if (this._vgop.length < 1) {
+	        break;
+	      }
+
+	      if (now - this._firstts < this._vgop[0].timestamp - this._firstpacketts) {
+	        break;
+	      }
+
+	      let avpacket = this._vgop.shift();
+
+	      this.emit('videopacket', avpacket);
+	    }
+
+	    while (1) {
+	      if (this._agop.length < 1) {
+	        break;
+	      }
+
+	      if (now - this._firstts < this._agop[0].timestamp - this._firstpacketts) {
+	        break;
+	      }
+
+	      let avpacket = this._agop.shift();
+
+	      this.emit('audiopacket', avpacket);
+	    }
+
+	    this.updateJitterBufferState();
+	  }
+
+	  pushAudio(avpacket) {
+	    this._agop.push(avpacket);
+	  }
+
+	  pushVideo(avpacket) {
+	    this._vgop.push(avpacket);
+
+	    this.updateJitterBufferState();
+	  }
+
+	  updateJitterBufferState() {
+	    let ret = true;
+
+	    while (ret) {
+	      ret = this.tryUpdateJitterBufferState();
+	    }
+	  }
+
+	  tryUpdateJitterBufferState() {
+	    let gop = this._vgop;
+
+	    if (this._status === JitterBufferStatus.notstart) {
+	      if (gop.length < 1) {
+	        return false;
+	      }
+
+	      this._status = JitterBufferStatus.bufferring;
+	      return true;
+	    } else if (this._status === JitterBufferStatus.bufferring) {
+	      if (gop.length < 2) {
+	        this._player._logger.warn('jitterbuffer', `now buffering, but gop len [${gop.length}] less than 2,`);
+
+	        return false;
+	      }
+
+	      if (gop[gop.length - 1].timestamp - gop[0].timestamp > this._player._options.delay) {
+	        this._firstpacketts = gop[0].timestamp;
+	        this._firstts = new Date().getTime();
+	        this._status = JitterBufferStatus.bufferReady;
+
+	        this._player._logger.info('jitterbuffer', `gop buffer ok, delay ${this._player._options.delay}, last[${gop[gop.length - 1].timestamp}] first[${gop[0].timestamp}] `);
+
+	        return true;
+	      }
+
+	      return false;
+	    } else if (this._status === JitterBufferStatus.bufferReady) {
+	      if (gop.length < 1) {
+	        this._player._logger.warn('jitterbuffer', `gop buffer is empty, restart buffering`);
+
+	        this._status = JitterBufferStatus.bufferring;
+	        return false;
+	      }
+
+	      this.tryDropFrames();
+	      return false;
+	    } else {
+	      this._player._logger.error('jitterbuffer', `jittbuffer status [${this._status}]  error !!!`);
+	    }
+
+	    return false;
+	  }
+
+	  tryDropFrames() {
+	    if (this._player._options.playMode !== 'live') {
+	      //  this._player._logger.error('jitterbuffer',`not drop frame!!!`);
+	      return;
+	    } //  this._player._logger.error('jitterbuffer',`drop frame [${this._player._options.playMode}] !!!`);
+
+
+	    let dropDelay = this._player._options.delay * delayScale;
+
+	    if (this._vgop.length < 2) {
+	      return;
+	    }
+
+	    if (this._vgop[this._vgop.length - 1].timestamp - this._vgop[0].timestamp < dropDelay) {
+	      return;
+	    }
+
+	    let lastkeyindex = -1;
+
+	    for (let i = 0; i < this._vgop.length; i++) {
+	      let avpacket = this._vgop[i];
+
+	      if (avpacket.iskeyframe) {
+	        lastkeyindex = i;
+	      }
+	    }
+
+	    if (lastkeyindex > 0) {
+	      let ts = this._vgop[lastkeyindex].timestamp;
+	      let lastaudioindex = -1;
+
+	      this._player._logger.warn('jitterbuffer', `live stream store so much video frames, so discard video ${lastkeyindex} frames !!!`);
+
+	      this._vgop = this._vgop.slice(lastkeyindex);
+
+	      for (let j = 0; j < this._agop.length; j++) {
+	        let avpacket = this._agop[j];
+
+	        if (avpacket.timestamp < ts) {
+	          lastaudioindex = j;
+	        }
+	      }
+
+	      if (lastaudioindex >= 0) {
+	        if (lastaudioindex + 1 >= this._agop.length) {
+	          this._agop = [];
+	        } else {
+	          this._agop = this._agop.slice(lastaudioindex + 1);
+	        }
+	      }
+	    }
+	  }
+
+	}
+
 	// import decModule from './decoder/decoder'
 
 	class WorkerCore {
@@ -6605,8 +7082,7 @@
 	  _samplesPerPacket = 0;
 	  _options = undefined;
 	  _gop = [];
-	  _timer = undefined;
-	  _statistic = undefined;
+	  _lastStatTs = undefined;
 	  _useSpliteBuffer = false;
 	  _spliteBuffer = undefined;
 	  _logger = undefined;
@@ -6624,6 +7100,7 @@
 	  _lastts;
 	  _curpts;
 	  _Module = undefined;
+	  _jitterBuffer = undefined;
 
 	  constructor(options, Module) {
 	    this._Module = Module;
@@ -6638,26 +7115,23 @@
 
 	    this._stream = new FetchStream(this); //get strem from remote
 
+	    this._jitterBuffer = new JitterBuffer(this);
 	    this.registerEvents();
 
 	    this._stream.start();
 
-	    this._timer = setInterval(() => {
-	      let cnt = Math.min(50, this._gop.length);
-
-	      while (cnt > 0) {
-	        this.handleTicket();
-	        cnt--;
-	      }
-	    }, 10);
+	    this._lastStatTs = new Date().getTime();
 	    this._stattimer = setInterval(() => {
-	      this._logger.info('WCSTAT', `------ WORKER CORE STAT ---------
-        video gen framerate:${this._vframerate / this._statsec} bitrate:${this._vbitrate * 8 / this._statsec / 1024 / 1024}M
-        audio gen framerate:${this._aframerate / this._statsec} bitrate:${this._abitrate * 8 / this._statsec}
-        yuv   gen framerate:${this._yuvframerate / this._statsec} bitrate:${this._yuvbitrate * 8 / this._statsec}
-        pcm   gen framerate:${this._pcmframerate / this._statsec} bitrate:${this._pcmbitrate * 8 / this._statsec}
-        packet buffer left count ${this._gop.length}
-        `);
+	      let now = new Date().getTime();
+	      let diff = (now - this._lastStatTs) / 1000;
+	      this._lastStatTs = now;
+
+	      this._logger.info('WCSTAT', `------ WORKER CORE STAT ${diff} ---------
+                video gen framerate:${this._vframerate / diff} bitrate:${this._vbitrate * 8 / diff / 1024 / 1024}M
+                audio gen framerate:${this._aframerate / diff} bitrate:${this._abitrate * 8 / diff}
+                yuv   gen framerate:${this._yuvframerate / diff} bitrate:${this._yuvbitrate * 8 / diff}
+                pcm   gen framerate:${this._pcmframerate / diff} bitrate:${this._pcmbitrate * 8 / diff}
+                `);
 
 	      this._vframerate = 0;
 	      this._vbitrate = 0;
@@ -6701,13 +7175,25 @@
 	    this._demuxer.on('videodata', packet => {
 	      this._vframerate++;
 	      this._vbitrate += packet.payload.length;
-	      this.decodeVideo(packet.payload, packet.timestamp, packet.iskeyframe);
+	      packet.timestamp = this.adjustTime(packet.timestamp);
+
+	      this._jitterBuffer.pushVideo(packet);
 	    });
 
 	    this._demuxer.on('audiodata', packet => {
 	      this._aframerate++;
 	      this._abitrate += packet.payload.length;
-	      this.decodeAudio(packet.payload, packet.timestamp);
+	      packet.timestamp = this.adjustTime(packet.timestamp);
+
+	      this._jitterBuffer.pushAudio(packet);
+	    });
+
+	    this._jitterBuffer.on('videopacket', packet => {
+	      this._vDecoder.decode(packet.payload, packet.iskeyframe ? 1 : 0, packet.timestamp);
+	    });
+
+	    this._jitterBuffer.on('audiopacket', packet => {
+	      this._aDecoder.decode(packet.payload, packet.timestamp);
 	    });
 	  }
 
@@ -6720,12 +7206,12 @@
 
 	    this._aDecoder = undefined;
 	    this._vDecoder = undefined;
-	    clearInterval(this._timer);
-	    clearInterval(this._statistic);
 
 	    this._stream.destroy();
 
 	    this._demuxer.destroy();
+
+	    this._jitterBuffer.destroy();
 
 	    clearInterval(this._stattimer);
 
@@ -6746,64 +7232,16 @@
 	    this.samplesPerPacket = 0;
 
 	    this._demuxer.reset();
-	  }
 
-	  handleTicket() {
-	    if (this._gop.length < 1) {
-	      return;
-	    }
-
-	    let avpacket = this._gop.shift();
-
-	    if (avpacket.avtype === AVType.Video) {
-	      this._vDecoder.decode(avpacket.payload, avpacket.iskeyframe ? 1 : 0, avpacket.timestamp);
-	    } else {
-	      this._aDecoder.decode(avpacket.payload, avpacket.timestamp);
-	    }
+	    this._jitterBuffer.reset();
 	  }
 
 	  setVideoCodec(vtype, extradata) {
 	    this._vDecoder.setCodec(vtype, extradata);
 	  }
 
-	  decodeVideo(videodata, timestamp, keyframe) {
-	    let avpacket = new AVPacket();
-	    avpacket.avtype = AVType.Video;
-	    avpacket.payload = videodata;
-	    avpacket.timestamp = timestamp, avpacket.iskeyframe = keyframe;
-
-	    if (keyframe && this._gop.length > 100000) {
-	      let bf = false;
-	      let i = 0;
-
-	      for (; i < this._gop.length; i++) {
-	        let avpacket = this._gop[i];
-
-	        if (avpacket.avtype === AVType.Video && avpacket.iskeyframe) {
-	          bf = true;
-	          break;
-	        }
-	      }
-
-	      if (bf) {
-	        this._logger.warn('WorkerCore', `packet buffer cache too much, drop ${this._gop.length - i} packet`);
-
-	        this._gop = this._gop.slice(0, i - 1);
-	      }
-	    }
-
-	    this._gop.push(avpacket);
-	  }
-
 	  setAudioCodec(atype, extradata) {
 	    this._aDecoder.setCodec(atype, extradata);
-	  }
-
-	  decodeAudio(audiodata, timestamp) {
-	    let avpacket = new AVPacket();
-	    avpacket.avtype = AVType.Audio;
-	    avpacket.payload = audiodata;
-	    avpacket.timestamp = timestamp, this._gop.push(avpacket);
 	  } //callback
 
 
@@ -6820,7 +7258,6 @@
 
 	  yuvData(yuv, timestamp) {
 	    //    this._logger.info('WorkerCore', `yuvdata timestamp ${timestamp}`);
-	    let nowpts = this.adjustTime(timestamp);
 	    let size = this._width * this._height * 3 / 2;
 
 	    let out = this._Module.HEAPU8.subarray(yuv, yuv + size);
@@ -6833,14 +7270,14 @@
 	      data,
 	      width: this._width,
 	      height: this._height,
-	      nowpts
+	      timestamp
 	    }, [data.buffer]);
 	  }
 
 	  audioInfo(atype, sampleRate, channels) {
 	    this._sampleRate = sampleRate;
 	    this._channels = channels;
-	    this._samplesPerPacket = caculateSamplesPerPacket(sampleRate);
+	    this._samplesPerPacket = caculateSamplesPerPacket();
 	    postMessage({
 	      cmd: WORKER_EVENT_TYPE.audioInfo,
 	      atype,
@@ -6857,16 +7294,16 @@
 	    } else {
 	      let diff = timestamp - this._lastts;
 
-	      if (diff < -1000) {
+	      if (diff < -3000) {
+	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
+
 	        this._curpts -= 25;
 	        this._lastts = timestamp;
+	      } else if (diff > 3000) {
+	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 
-	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
-	      } else if (diff > 1000) {
 	        this._curpts += diff;
 	        this._lastts = timestamp;
-
-	        this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 	      } else {
 	        this._curpts += diff;
 	        this._lastts = timestamp;
@@ -6878,7 +7315,6 @@
 
 	  pcmData(pcmDataArray, samples, timestamp) {
 	    //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
-	    let nowpts = this.adjustTime(timestamp);
 	    let datas = [];
 	    this._pcmframerate++;
 
@@ -6893,7 +7329,7 @@
 	        postMessage({
 	          cmd: WORKER_EVENT_TYPE.pcmData,
 	          datas,
-	          nowpts
+	          timestamp
 	        }, datas.map(x => x.buffer));
 	        return;
 	      }
@@ -6902,7 +7338,7 @@
 	      this._useSpliteBuffer = true;
 	    }
 
-	    this._spliteBuffer.addBuffer(datas, nowpts);
+	    this._spliteBuffer.addBuffer(datas, timestamp);
 
 	    this._spliteBuffer.splite((buffers, ts) => {
 	      postMessage({
