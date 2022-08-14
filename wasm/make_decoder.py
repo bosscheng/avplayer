@@ -10,7 +10,7 @@ args = {'-o': '../src/decoder/decoder'}
 
 sargs = {
     'WASM': 1,
-    'TOTAL_MEMORY': 67108864*8,
+    'TOTAL_MEMORY': 128*1024*1024,
     'ASSERTIONS': 0,
     'ERROR_ON_UNDEFINED_SYMBOLS': 0,
     'DISABLE_EXCEPTION_CATCHING': 1,

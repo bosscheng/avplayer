@@ -7107,9 +7107,7 @@
 	    this._vDecoder = new this._Module.VideoDecoder(this);
 	    this._aDecoder = new this._Module.AudioDecoder(this);
 	    this._options = options;
-	    this._logger = new Logger();
-
-	    this._logger.setLogEnable(true);
+	    this._logger = new Logger(); //  this._logger.setLogEnable(true);
 
 	    this._demuxer = new FLVDemuxer(this); // demux stream to h264/h265 aac/pcmu/pcma
 
