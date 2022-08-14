@@ -8,7 +8,7 @@ const JitterBufferStatus = {
 }
 
 
-const delayScale = 2.0;
+const delayScale = 5;
 
 class JitterBuffer extends EventEmitter {
 
@@ -242,12 +242,16 @@ class JitterBuffer extends EventEmitter {
 
         }
 
-        if (lastkeyindex >= 0) {
+        if (lastkeyindex > 0) {
 
             let ts = this._vgop[lastkeyindex].timestamp;
             let lastaudioindex = -1;
 
+            this._player._logger.warn('jitterbuffer',`live stream store so much video frames, so discard video ${lastkeyindex} frames !!!`);
+
             this._vgop = this._vgop.slice(lastkeyindex);
+
+
 
             for (let j = 0; j < this._agop.length; j++) {
 
