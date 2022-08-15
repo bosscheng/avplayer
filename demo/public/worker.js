@@ -6933,6 +6933,7 @@
 	      let avpacket = this._vgop.shift();
 
 	      this.emit('videopacket', avpacket);
+	      break;
 	    }
 
 	    while (1) {
@@ -6947,6 +6948,7 @@
 	      let avpacket = this._agop.shift();
 
 	      this.emit('audiopacket', avpacket);
+	      break;
 	    }
 
 	    this.updateJitterBufferState();

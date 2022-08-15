@@ -104,6 +104,8 @@ class JitterBuffer extends EventEmitter {
      
             this.emit('videopacket', avpacket);
 
+            break;
+
         }
 
         while(1) {
@@ -121,6 +123,8 @@ class JitterBuffer extends EventEmitter {
             let avpacket = this._agop.shift();
      
             this.emit('audiopacket', avpacket);
+
+            break;
         }
 
         this.updateJitterBufferState();
