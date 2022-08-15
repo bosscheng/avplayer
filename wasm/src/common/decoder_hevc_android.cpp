@@ -336,7 +336,7 @@ IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size, UW
 
 Decoder_HEVC_Android::Decoder_HEVC_Android(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL) {
 
-   mCodec = new HEVCCodec(IV_YUV_420P, 4);
+   mCodec = new HEVCCodec(IV_YUV_420P, 8);
 }
 
 Decoder_HEVC_Android::~Decoder_HEVC_Android() {
