@@ -69,7 +69,7 @@ class WorkerCore {
         this._options = options;
 
         this._logger = new Logger();
-        this._logger.setLogEnable(true);
+      //  this._logger.setLogEnable(true);
 
         this._demuxer = new FLVDemuxer(this);     // demux stream to h264/h265 aac/pcmu/pcma
         this._stream = new FetchStream(this); //get strem from remote

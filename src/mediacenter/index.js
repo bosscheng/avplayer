@@ -30,6 +30,9 @@ class MediaCenter extends EventEmitter  {
         } else if (player._options.decoderMode === 'simd_1') {
 
             workerfile = 'worker_simd_1.js';
+        } else if (player._options.decoderMode === 'simd_2') {
+
+            workerfile = 'worker_simd_2.js'; 
         } else {
 
             this._player._logger.console.error();('mediacenter', `decoderMode not support ${player._options.decoderMode}`);

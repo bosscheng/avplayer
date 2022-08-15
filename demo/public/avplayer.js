@@ -2468,6 +2468,8 @@ void main(void) {
           workerfile = 'worker_simd.js';
         } else if (player._options.decoderMode === 'simd_1') {
           workerfile = 'worker_simd_1.js';
+        } else if (player._options.decoderMode === 'simd_2') {
+          workerfile = 'worker_simd_2.js';
         } else {
           this._player._logger.console.error();
 
@@ -2812,9 +2814,7 @@ void main(void) {
 
       constructor(options) {
         super();
-        this._logger = new Logger();
-
-        this._logger.setLogEnable(true);
+        this._logger = new Logger(); //  this._logger.setLogEnable(true);
 
         this._options = Object.assign({}, DEFAULT_PLAYER_OPTIONS, options);
         this._container = options.container;

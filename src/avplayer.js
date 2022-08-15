@@ -47,7 +47,7 @@ class AVPlayer extends EventEmitter{
         super();
 
         this._logger = new Logger();
-        this._logger.setLogEnable(true);
+      //  this._logger.setLogEnable(true);
 
         this._options = Object.assign({}, DEFAULT_PLAYER_OPTIONS, options);
         this._container = options.container;

@@ -153,9 +153,9 @@
 	  var err = Module["printErr"] || console.warn.bind(console);
 	  Object.assign(Module, moduleOverrides);
 	  moduleOverrides = null;
-	  if (Module["arguments"]) Module["arguments"];
+	  if (Module["arguments"]) ;
 	  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-	  if (Module["quit"]) Module["quit"];
+	  if (Module["quit"]) ;
 	  var POINTER_SIZE = 4;
 
 	  var wasmBinary;
@@ -6933,6 +6933,7 @@
 	      let avpacket = this._vgop.shift();
 
 	      this.emit('videopacket', avpacket);
+	      break;
 	    }
 
 	    while (1) {
@@ -6947,6 +6948,7 @@
 	      let avpacket = this._agop.shift();
 
 	      this.emit('audiopacket', avpacket);
+	      break;
 	    }
 
 	    this.updateJitterBufferState();
@@ -7107,9 +7109,7 @@
 	    this._vDecoder = new this._Module.VideoDecoder(this);
 	    this._aDecoder = new this._Module.AudioDecoder(this);
 	    this._options = options;
-	    this._logger = new Logger();
-
-	    this._logger.setLogEnable(true);
+	    this._logger = new Logger(); //  this._logger.setLogEnable(true);
 
 	    this._demuxer = new FLVDemuxer(this); // demux stream to h264/h265 aac/pcmu/pcma
 

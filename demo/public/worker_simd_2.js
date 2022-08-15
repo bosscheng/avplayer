@@ -14,7 +14,7 @@
 		return module = { exports: {} }, fn(module, module.exports), module.exports;
 	}
 
-	var decoder_simd = createCommonjsModule(function (module) {
+	var decoder_simd_2 = createCommonjsModule(function (module) {
 	  var Module = typeof Module != "undefined" ? Module : {};
 	  var moduleOverrides = Object.assign({}, Module);
 	  var thisProgram = "./this.program";
@@ -516,7 +516,7 @@
 	  }
 
 	  var wasmBinaryFile;
-	  wasmBinaryFile = "decoder_simd.wasm";
+	  wasmBinaryFile = "decoder_simd_2.wasm";
 
 	  if (!isDataURI(wasmBinaryFile)) {
 	    wasmBinaryFile = locateFile(wasmBinaryFile);
@@ -636,24 +636,7 @@
 
 	  function callRuntimeCallbacks(callbacks) {
 	    while (callbacks.length > 0) {
-	      var callback = callbacks.shift();
-
-	      if (typeof callback == "function") {
-	        callback(Module);
-	        continue;
-	      }
-
-	      var func = callback.func;
-
-	      if (typeof func == "number") {
-	        if (callback.arg === undefined) {
-	          getWasmTableEntry(func)();
-	        } else {
-	          getWasmTableEntry(func)(callback.arg);
-	        }
-	      } else {
-	        func(callback.arg === undefined ? null : callback.arg);
-	      }
+	      callbacks.shift()(Module);
 	    }
 	  }
 
@@ -1088,22 +1071,8 @@
 	    }
 	  };
 
-	  function zeroMemory(address, size) {
-	    HEAPU8.fill(0, address, address + size);
-	  }
-
-	  function alignMemory(size, alignment) {
-	    return Math.ceil(size / alignment) * alignment;
-	  }
-
 	  function mmapAlloc(size) {
-	    size = alignMemory(size, 65536);
-
-	    var ptr = _emscripten_builtin_memalign(65536, size);
-
-	    if (!ptr) return 0;
-	    zeroMemory(ptr, size);
-	    return ptr;
+	    abort();
 	  }
 
 	  var MEMFS = {
@@ -1425,7 +1394,7 @@
 	          }
 
 	          allocated = true;
-	          ptr = mmapAlloc(length);
+	          ptr = mmapAlloc();
 
 	          if (!ptr) {
 	            throw new FS.ErrnoError(48);
@@ -3159,7 +3128,7 @@
 
 	      stream_ops.mmap = (stream, length, position, prot, flags) => {
 	        FS.forceLoadFile(node);
-	        var ptr = mmapAlloc(length);
+	        var ptr = mmapAlloc();
 
 	        if (!ptr) {
 	          throw new FS.ErrnoError(48);
@@ -4118,7 +4087,7 @@
 	    }
 
 	    if (!handle.$$) {
-	      throwBindingError('Cannot pass "' + _embind_repr(handle) + '" as a ' + this.name);
+	      throwBindingError('Cannot pass "' + embindRepr(handle) + '" as a ' + this.name);
 	    }
 
 	    if (!handle.$$.ptr) {
@@ -4152,7 +4121,7 @@
 	    }
 
 	    if (!handle.$$) {
-	      throwBindingError('Cannot pass "' + _embind_repr(handle) + '" as a ' + this.name);
+	      throwBindingError('Cannot pass "' + embindRepr(handle) + '" as a ' + this.name);
 	    }
 
 	    if (!handle.$$.ptr) {
@@ -4219,7 +4188,7 @@
 	    }
 
 	    if (!handle.$$) {
-	      throwBindingError('Cannot pass "' + _embind_repr(handle) + '" as a ' + this.name);
+	      throwBindingError('Cannot pass "' + embindRepr(handle) + '" as a ' + this.name);
 	    }
 
 	    if (!handle.$$.ptr) {
@@ -4236,7 +4205,7 @@
 	  }
 
 	  function simpleReadValueFromPointer(pointer) {
-	    return this["fromWireType"](HEAPU32[pointer >> 2]);
+	    return this["fromWireType"](HEAP32[pointer >> 2]);
 	  }
 
 	  function RegisteredPointer_getPointee(ptr) {
@@ -4317,7 +4286,8 @@
 	      return dynCallLegacy(sig, ptr, args);
 	    }
 
-	    return getWasmTableEntry(ptr).apply(null, args);
+	    var rtn = getWasmTableEntry(ptr).apply(null, args);
+	    return rtn;
 	  }
 
 	  function getDynCaller(sig, ptr) {
@@ -4456,7 +4426,7 @@
 	    var array = [];
 
 	    for (var i = 0; i < count; i++) {
-	      array.push(HEAP32[(firstElement >> 2) + i]);
+	      array.push(HEAPU32[firstElement + i * 4 >> 2]);
 	    }
 
 	    return array;
@@ -4735,7 +4705,7 @@
 	    });
 	  }
 
-	  function _embind_repr(v) {
+	  function embindRepr(v) {
 	    if (v === null) {
 	      return "null";
 	    }
@@ -4882,13 +4852,14 @@
 	      name: name,
 	      "fromWireType": function (value) {
 	        var length = HEAPU32[value >> 2];
+	        var payload = value + 4;
 	        var str;
 
 	        if (stdStringIsUTF8) {
-	          var decodeStartPtr = value + 4;
+	          var decodeStartPtr = payload;
 
 	          for (var i = 0; i <= length; ++i) {
-	            var currentBytePtr = value + 4 + i;
+	            var currentBytePtr = payload + i;
 
 	            if (i == length || HEAPU8[currentBytePtr] == 0) {
 	              var maxRead = currentBytePtr - decodeStartPtr;
@@ -4908,7 +4879,7 @@
 	          var a = new Array(length);
 
 	          for (var i = 0; i < length; ++i) {
-	            a[i] = String.fromCharCode(HEAPU8[value + 4 + i]);
+	            a[i] = String.fromCharCode(HEAPU8[payload + i]);
 	          }
 
 	          str = a.join("");
@@ -4923,7 +4894,7 @@
 	          value = new Uint8Array(value);
 	        }
 
-	        var getLength;
+	        var length;
 	        var valueIsOfTypeString = typeof value == "string";
 
 	        if (!(valueIsOfTypeString || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Int8Array)) {
@@ -4931,19 +4902,18 @@
 	        }
 
 	        if (stdStringIsUTF8 && valueIsOfTypeString) {
-	          getLength = () => lengthBytesUTF8(value);
+	          length = lengthBytesUTF8(value);
 	        } else {
-	          getLength = () => value.length;
+	          length = value.length;
 	        }
 
-	        var length = getLength();
+	        var base = _malloc(4 + length + 1);
 
-	        var ptr = _malloc(4 + length + 1);
-
-	        HEAPU32[ptr >> 2] = length;
+	        var ptr = base + 4;
+	        HEAPU32[base >> 2] = length;
 
 	        if (stdStringIsUTF8 && valueIsOfTypeString) {
-	          stringToUTF8(value, ptr + 4, length + 1);
+	          stringToUTF8(value, ptr, length + 1);
 	        } else {
 	          if (valueIsOfTypeString) {
 	            for (var i = 0; i < length; ++i) {
@@ -4955,20 +4925,20 @@
 	                throwBindingError("String has UTF-16 code units that do not fit in 8 bits");
 	              }
 
-	              HEAPU8[ptr + 4 + i] = charCode;
+	              HEAPU8[ptr + i] = charCode;
 	            }
 	          } else {
 	            for (var i = 0; i < length; ++i) {
-	              HEAPU8[ptr + 4 + i] = value[i];
+	              HEAPU8[ptr + i] = value[i];
 	            }
 	          }
 	        }
 
 	        if (destructors !== null) {
-	          destructors.push(_free, ptr);
+	          destructors.push(_free, base);
 	        }
 
-	        return ptr;
+	        return base;
 	      },
 	      "argPackAdvance": 8,
 	      "readValueFromPointer": simpleReadValueFromPointer,
@@ -5415,37 +5385,37 @@
 	  }
 
 	  var asmLibraryArg = {
-	    "s": ___cxa_allocate_exception,
-	    "r": ___cxa_throw,
+	    "r": ___cxa_allocate_exception,
+	    "q": ___cxa_throw,
 	    "C": ___syscall_fcntl64,
 	    "v": ___syscall_openat,
-	    "u": __embind_register_bigint,
+	    "t": __embind_register_bigint,
 	    "E": __embind_register_bool,
-	    "m": __embind_register_class,
-	    "l": __embind_register_class_constructor,
+	    "i": __embind_register_class,
+	    "h": __embind_register_class_constructor,
 	    "d": __embind_register_class_function,
 	    "D": __embind_register_emval,
-	    "o": __embind_register_float,
+	    "l": __embind_register_float,
 	    "c": __embind_register_integer,
 	    "b": __embind_register_memory_view,
-	    "p": __embind_register_std_string,
-	    "k": __embind_register_std_wstring,
-	    "q": __embind_register_void,
-	    "j": __emscripten_date_now,
-	    "f": __emval_call_void_method,
-	    "g": __emval_decref,
-	    "e": __emval_get_method_caller,
+	    "m": __embind_register_std_string,
+	    "g": __embind_register_std_wstring,
+	    "p": __embind_register_void,
+	    "f": __emscripten_date_now,
+	    "n": __emval_call_void_method,
+	    "o": __emval_decref,
+	    "j": __emval_get_method_caller,
 	    "a": _abort,
 	    "z": _emscripten_memcpy_big,
-	    "i": _emscripten_resize_heap,
+	    "e": _emscripten_resize_heap,
 	    "x": _environ_get,
 	    "y": _environ_sizes_get,
-	    "n": _fd_close,
+	    "k": _fd_close,
 	    "w": _fd_fdstat_get,
 	    "B": _fd_read,
-	    "t": _fd_seek,
+	    "s": _fd_seek,
 	    "A": _fd_write,
-	    "h": _setTempRet0
+	    "u": _setTempRet0
 	  };
 	  createWasm();
 
@@ -5473,31 +5443,13 @@
 	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["L"]).apply(null, arguments);
 	  };
 
-	  var _emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = function () {
-	    return (_emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = Module["asm"]["N"]).apply(null, arguments);
-	  };
-
 	  var ___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = function () {
-	    return (___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = Module["asm"]["O"]).apply(null, arguments);
-	  };
-
-	  Module["dynCall_viiijj"] = function () {
-	    return (Module["dynCall_viiijj"] = Module["asm"]["P"]).apply(null, arguments);
-	  };
-
-	  Module["dynCall_jij"] = function () {
-	    return (Module["dynCall_jij"] = Module["asm"]["Q"]).apply(null, arguments);
-	  };
-
-	  Module["dynCall_jii"] = function () {
-	    return (Module["dynCall_jii"] = Module["asm"]["R"]).apply(null, arguments);
+	    return (___cxa_is_pointer_type = Module["___cxa_is_pointer_type"] = Module["asm"]["N"]).apply(null, arguments);
 	  };
 
 	  Module["dynCall_jiji"] = function () {
-	    return (Module["dynCall_jiji"] = Module["asm"]["S"]).apply(null, arguments);
+	    return (Module["dynCall_jiji"] = Module["asm"]["O"]).apply(null, arguments);
 	  };
-
-	  Module["_ff_h264_cabac_tables"] = 271061;
 
 	  var calledRun;
 
@@ -7386,9 +7338,9 @@
 	  });
 	}
 
-	decoder_simd.postRun = () => {
-	  workerPostRun(decoder_simd);
+	decoder_simd_2.postRun = () => {
+	  workerPostRun(decoder_simd_2);
 	};
 
 }));
-//# sourceMappingURL=worker_simd.js.map
+//# sourceMappingURL=worker_simd_2.js.map

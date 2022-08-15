@@ -74,6 +74,10 @@ const baseConfig = {
                 {
                     src: "src/decoder/decoder_simd_1.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
+                },
+                {
+                    src: "src/decoder/decoder_simd_2.wasm",
+                    dest: isProd ? 'dist' : 'demo/public'
                 }
             ]
         })
@@ -126,6 +130,14 @@ export default [
         output: {
             name: 'worker',
             file: isProd ? 'dist/worker_simd_1.js' : 'demo/public/worker_simd_1.js',
+        },
+        plugins: []
+    },
+    {
+        input: 'src/worker/worker_simd_2.js',
+        output: {
+            name: 'worker',
+            file: isProd ? 'dist/worker_simd_2.js' : 'demo/public/worker_simd_2.js',
         },
         plugins: []
     }
