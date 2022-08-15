@@ -153,9 +153,9 @@
 	  var err = Module["printErr"] || console.warn.bind(console);
 	  Object.assign(Module, moduleOverrides);
 	  moduleOverrides = null;
-	  if (Module["arguments"]) Module["arguments"];
+	  if (Module["arguments"]) ;
 	  if (Module["thisProgram"]) thisProgram = Module["thisProgram"];
-	  if (Module["quit"]) Module["quit"];
+	  if (Module["quit"]) ;
 	  var POINTER_SIZE = 4;
 
 	  var wasmBinary;
