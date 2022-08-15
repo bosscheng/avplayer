@@ -310,6 +310,8 @@ IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size, UW
   *pictype = dec_op.e_pic_type;
   *pts = dec_op.u4_ts;
 
+  // printf(" decoder result ret:%d u4_error_code:%d pictype:%d, pts:%d u4_frame_decoded_flag:%d e4_fld_type:%d \n", ret, dec_op.u4_error_code, dec_op.e_pic_type, dec_op.u4_ts, dec_op.u4_frame_decoded_flag, dec_op.e4_fld_type);
+
   /* In case of change in resolution, reset codec and feed the same data again
    */
   if (IVD_RES_CHANGED == (dec_op.u4_error_code & 0xFF)) {
@@ -336,7 +338,7 @@ IV_API_CALL_STATUS_T HEVCCodec::decodeFrame(const uint8_t *data, size_t size, UW
 
 Decoder_HEVC_Android::Decoder_HEVC_Android(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL) {
 
-   mCodec = new HEVCCodec(IV_YUV_420P, 8);
+   mCodec = new HEVCCodec(IV_YUV_420P, 4);
 }
 
 Decoder_HEVC_Android::~Decoder_HEVC_Android() {
@@ -400,7 +402,9 @@ void Decoder_HEVC_Android::decode(unsigned char *buf, unsigned int buflen, unsig
 
         ret = mCodec->decodeFrame(data, size, timestamp, &bytesConsumed, &pictype, &pts);
      
-        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME && pts > 0) {
+        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME && pts != 0xFFFFFFFF) {
+
+           // printf("enter into succes  process !! pts: %d \n", pts);
 
             int resolution = mVideoWith*mVideoHeight;               
             memcpy(mYUV, mCodec->mOutBufHandle.pu1_bufs[0], resolution);
