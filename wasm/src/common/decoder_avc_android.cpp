@@ -404,7 +404,7 @@ void Decoder_AVC_Android::decode(unsigned char *buf, unsigned int buflen, unsign
 
         ret = mCodec->decodeFrame(data, size, timestamp, &bytesConsumed, &pictype, &pts);
 
-        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME && pts > 0) {
+        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME && pts != 0xFFFFFFFF) {
 
             int resolution = mVideoWith*mVideoHeight;               
             memcpy(mYUV, mCodec->mOutBufHandle.pu1_bufs[0], resolution);
