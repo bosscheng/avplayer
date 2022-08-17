@@ -13,7 +13,6 @@ class Decoder_HEVC_Android : public DecoderVideo
          void    *mCodecCtx;            // Codec context
          int      mVideoWith;          
          int      mVideoHeight;
-         unsigned char* mYUV;
 
         HEVCCodec* mCodec;
 

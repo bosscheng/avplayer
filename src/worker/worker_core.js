@@ -49,7 +49,7 @@ class WorkerCore {
     _pcmbitrate = 0;
 
 
-    _statsec = 2;
+    _statsec = 1;
 
     _lastts;
     _curpts;
@@ -69,7 +69,7 @@ class WorkerCore {
         this._options = options;
 
         this._logger = new Logger();
-      //  this._logger.setLogEnable(true);
+    //    this._logger.setLogEnable(true);
 
         this._demuxer = new FLVDemuxer(this);     // demux stream to h264/h265 aac/pcmu/pcma
         this._stream = new FetchStream(this); //get strem from remote
@@ -243,6 +243,8 @@ class WorkerCore {
 
         this._width = width;
         this._height = height;
+
+        this._logger.info('WorkerCore', `videoInfo width ${width} height ${height}`);
 
         postMessage({cmd: WORKER_EVENT_TYPE.videoInfo, vtype, width, height})
     }

@@ -79,6 +79,7 @@ class AVCCodec {
   uint32_t mWidth;
   uint32_t mHeight;
   ivd_out_bufdesc_t mOutBufHandle;
+  UWORD8* mBuf;
 
  private:
   IV_COLOR_FORMAT_T mColorFormat;
@@ -89,11 +90,12 @@ class AVCCodec {
 };
 
 AVCCodec::AVCCodec(IV_COLOR_FORMAT_T colorFormat, size_t numCores) {
-  mColorFormat = colorFormat;
-  mNumCores = numCores;
-  mCodec = nullptr;
-  mWidth = 0;
-  mHeight = 0;
+    mColorFormat = colorFormat;
+    mNumCores = numCores;
+    mCodec = nullptr;
+    mWidth = 0;
+    mHeight = 0;
+    mBuf = NULL;
 
   memset(&mOutBufHandle, 0, sizeof(mOutBufHandle));
 }
@@ -194,9 +196,14 @@ void AVCCodec::setArchitecture(IVD_ARCH_T arch) {
 void AVCCodec::freeFrame() {
   for (int i = 0; i < mOutBufHandle.u4_num_bufs; i++) {
     if (mOutBufHandle.pu1_bufs[i]) {
-      free(mOutBufHandle.pu1_bufs[i]);
+   //   free(mOutBufHandle.pu1_bufs[i]);
       mOutBufHandle.pu1_bufs[i] = nullptr;
     }
+  }
+
+  if (mBuf) {
+    avc_iv_aligned_free(NULL, mBuf);
+    mBuf = NULL;
   }
 }
 void AVCCodec::allocFrame() {
@@ -214,18 +221,22 @@ void AVCCodec::allocFrame() {
       sizes[0] = mWidth * mHeight;
       sizes[1] = mWidth * mHeight >> 1;
       num_bufs = 2;
+      mBuf = (UWORD8 *)avc_iv_aligned_malloc(NULL, 16, mWidth * mHeight*3/2);
       break;
     case IV_YUV_422ILE:
       sizes[0] = mWidth * mHeight * 2;
       num_bufs = 1;
+      mBuf = (UWORD8 *)avc_iv_aligned_malloc(NULL, 16, mWidth * mHeight*2);
       break;
     case IV_RGB_565:
       sizes[0] = mWidth * mHeight * 2;
       num_bufs = 1;
+      mBuf = (UWORD8 *)avc_iv_aligned_malloc(NULL, 16, mWidth * mHeight*2);
       break;
     case IV_RGBA_8888:
       sizes[0] = mWidth * mHeight * 4;
       num_bufs = 1;
+      mBuf = (UWORD8 *)avc_iv_aligned_malloc(NULL, 16, mWidth * mHeight*4);
       break;
     case IV_YUV_420P:
       [[fallthrough]];
@@ -234,12 +245,17 @@ void AVCCodec::allocFrame() {
       sizes[1] = mWidth * mHeight >> 2;
       sizes[2] = mWidth * mHeight >> 2;
       num_bufs = 3;
+      mBuf = (UWORD8 *)avc_iv_aligned_malloc(NULL, 16, mWidth * mHeight*3/2);
       break;
   }
   mOutBufHandle.u4_num_bufs = num_bufs;
+
+  UWORD8* tmp = mBuf;
   for (int i = 0; i < num_bufs; i++) {
     mOutBufHandle.u4_min_out_buf_size[i] = sizes[i];
-    mOutBufHandle.pu1_bufs[i] = (UWORD8 *)avc_iv_aligned_malloc(NULL, 16, sizes[i]);
+    // mOutBufHandle.pu1_bufs[i] = (UWORD8 *)avc_iv_aligned_malloc(NULL, 16, sizes[i]);
+    mOutBufHandle.pu1_bufs[i] = tmp;
+    tmp +=  sizes[i];
   }
 }
 void AVCCodec::decodeHeader(const uint8_t *data, size_t size) {
@@ -330,12 +346,22 @@ IV_API_CALL_STATUS_T AVCCodec::decodeFrame(const uint8_t *data, size_t size, UWO
     allocFrame();
   }
 
+
+  if (ret == IV_SUCCESS) {
+
+        if (dec_op.s_disp_frm_buf.u4_y_wd == 0) {
+
+            ret = IV_FAIL;
+        }
+
+  }
+
   return ret;
 }
 
 
 
-Decoder_AVC_Android::Decoder_AVC_Android(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0), mYUV(NULL) {
+Decoder_AVC_Android::Decoder_AVC_Android(DecoderVideoObserver* obs):DecoderVideo(obs), mVideoWith(0), mVideoHeight(0) {
 
    mCodec = new AVCCodec(IV_YUV_420P, 1);
 }
@@ -347,10 +373,6 @@ Decoder_AVC_Android::~Decoder_AVC_Android() {
         mCodec->freeFrame();
         mCodec->deleteCodec();
         delete mCodec;
-    }
-
-    if (mYUV) {
-        avc_iv_aligned_free(NULL, mYUV);
     }
 
 }
@@ -379,9 +401,6 @@ void Decoder_AVC_Android::decode(unsigned char *buf, unsigned int buflen, unsign
 
         mCodec->setParams(IVD_DECODE_FRAME);
         mCodec->allocFrame();
-
-        mYUV = (unsigned char*)avc_iv_aligned_malloc(NULL, 16, mVideoWith*mVideoHeight*3/2);
-
         mObserver->videoInfo(mVideoWith, mVideoHeight);
     }
 
@@ -404,17 +423,11 @@ void Decoder_AVC_Android::decode(unsigned char *buf, unsigned int buflen, unsign
 
         ret = mCodec->decodeFrame(data, size, timestamp, &bytesConsumed, &pictype, &pts);
 
-        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME && pts != 0xFFFFFFFF) {
+        if (ret == IV_SUCCESS && pictype < IV_NA_FRAME) {
 
-            int resolution = mVideoWith*mVideoHeight;               
-            memcpy(mYUV, mCodec->mOutBufHandle.pu1_bufs[0], resolution);
-            memcpy(mYUV + resolution, mCodec->mOutBufHandle.pu1_bufs[1], resolution>>2);
-            memcpy(mYUV + resolution*5/4, mCodec->mOutBufHandle.pu1_bufs[2], resolution>>2);
-
-            mObserver->yuvData(mYUV, pts);
+            mObserver->yuvData(mCodec->mBuf, pts);
             
            // printf("SIMD AVC Decoder Success jsts %d ts %d pictype 0x%x consumebyte %d left %d \n", timestamp, pts, pictype, bytesConsumed, size - bytesConsumed);
-
         } 
 
         bytesConsumed = std::min(size, bytesConsumed);
