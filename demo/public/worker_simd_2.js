@@ -7050,7 +7050,7 @@
 	  _yuvbitrate = 0;
 	  _pcmframerate = 0;
 	  _pcmbitrate = 0;
-	  _statsec = 2;
+	  _statsec = 1;
 	  _lastts;
 	  _curpts;
 	  _Module = undefined;
@@ -7061,7 +7061,7 @@
 	    this._vDecoder = new this._Module.VideoDecoder(this);
 	    this._aDecoder = new this._Module.AudioDecoder(this);
 	    this._options = options;
-	    this._logger = new Logger(); //  this._logger.setLogEnable(true);
+	    this._logger = new Logger(); //    this._logger.setLogEnable(true);
 
 	    this._demuxer = new FLVDemuxer(this); // demux stream to h264/h265 aac/pcmu/pcma
 
@@ -7200,6 +7200,9 @@
 	  videoInfo(vtype, width, height) {
 	    this._width = width;
 	    this._height = height;
+
+	    this._logger.info('WorkerCore', `videoInfo width ${width} height ${height}`);
+
 	    postMessage({
 	      cmd: WORKER_EVENT_TYPE.videoInfo,
 	      vtype,

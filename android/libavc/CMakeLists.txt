@@ -207,7 +207,7 @@ list(APPEND AVCENC_SRCS
 add_executable(avcenc ${AVCENC_SRCS})
 set_target_properties(avcenc
                       PROPERTIES COMPILE_FLAGS
-                                 "-DARM -DMD5_DISABLE -DPROFILE_ENABLE")
+                                 "-DARM -DMD5_DISABLE")
 target_link_libraries(avcenc
                       libavcenc
                       Threads::Threads
