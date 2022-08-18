@@ -92,7 +92,7 @@ list(APPEND LIBAVCDEC_X86_SRCS
 set(LIBAVCDEC_INCLUDES ${AVC_ROOT}/common ${AVC_ROOT}/decoder)
 
 set(LIBAVCDEC_X86_C_FLAGS
-    "-DX86 -DDISABLE_AVX2 -msse4.2 -mno-avx -DDEFAULT_ARCH=D_ARCH_X86_SSE42 -O3 -flto -msimd128")
+    "-DX86 -DDISABLE_AVX2 -msse4.2 -mno-avx -DDEFAULT_ARCH=D_ARCH_X86_SSE42 -O3 -msimd128")
 set(LIBAVCDEC_X86_INCLUDES ${AVC_ROOT}/common/x86 ${AVC_ROOT}/decoder/x86)
 set(LIBAVCDEC_C_FLAGS "${LIBAVCDEC_X86_C_FLAGS}")
 
@@ -100,12 +100,13 @@ include_directories(${LIBAVCDEC_INCLUDES} ${LIBAVCDEC_X86_INCLUDES})
 add_library(libavcdec ${LIBAVCDEC_SRCS} ${LIBAVCDEC_X86_SRCS})
 set_target_properties(libavcdec PROPERTIES COMPILE_FLAGS "${LIBAVCDEC_C_FLAGS}")
 
-list(APPEND AVCDEC_SRCS "${AVC_ROOT}/test/decoder/main.c")
+# list(APPEND AVCDEC_SRCS "${AVC_ROOT}/test/decoder/main.c")
 
-add_executable(avcdec ${AVCDEC_SRCS})
-set_target_properties(avcdec
-                      PROPERTIES COMPILE_FLAGS "-DMD5_DISABLE -DPROFILE_ENABLE")
-target_link_libraries(avcdec libavcdec Threads::Threads)
+
+# add_executable(avcdec ${AVCDEC_SRCS})
+# set_target_properties(avcdec
+#                       PROPERTIES COMPILE_FLAGS "-DMD5_DISABLE -DPROFILE_ENABLE")
+# target_link_libraries(avcdec libavcdec Threads::Threads)
 
 list(APPEND LIBAVCENC_SRCS
             "${AVC_ROOT}/common/ih264_resi_trans_quant.c"
@@ -189,7 +190,7 @@ list(APPEND LIBAVCENC_X86_SRCS
 
 set(LIBAVCENC_INCLUDES ${AVC_ROOT}/common ${AVC_ROOT}/encoder)
 
-set(LIBAVCENC_X86_C_FLAGS "-msse4.2 -mno-avx -UHP_PL -DN_MB_ENABLE -O3 -flto -msimd128")
+set(LIBAVCENC_X86_C_FLAGS "-msse4.2 -mno-avx -UHP_PL -DN_MB_ENABLE -O3 -msimd128")
 set(LIBAVCENC_C_FLAGS "${LIBAVCENC_X86_C_FLAGS}")
 set(LIBAVCENC_X86_INCLUDES ${AVC_ROOT}/common/x86 ${AVC_ROOT}/encoder/x86)
 
@@ -197,18 +198,19 @@ include_directories(${LIBAVCENC_INCLUDES} ${LIBAVCENC_X86_INCLUDES})
 add_library(libavcenc ${LIBAVCENC_SRCS} ${LIBAVCENC_X86_SRCS})
 set_target_properties(libavcenc PROPERTIES COMPILE_FLAGS "${LIBAVCENC_C_FLAGS}")
 
-list(APPEND AVCENC_SRCS
-            "${AVC_ROOT}/test/encoder/main.c"
-            "${AVC_ROOT}/test/encoder/psnr.c"
-            "${AVC_ROOT}/test/encoder/input.c"
-            "${AVC_ROOT}/test/encoder/output.c"
-            "${AVC_ROOT}/test/encoder/recon.c")
+# list(APPEND AVCENC_SRCS
+#             "${AVC_ROOT}/test/encoder/main.c"
+#             "${AVC_ROOT}/test/encoder/psnr.c"
+#             "${AVC_ROOT}/test/encoder/input.c"
+#             "${AVC_ROOT}/test/encoder/output.c"
+#             "${AVC_ROOT}/test/encoder/recon.c")
 
-add_executable(avcenc ${AVCENC_SRCS})
-set_target_properties(avcenc
-                      PROPERTIES COMPILE_FLAGS
-                                 "-DARM -DMD5_DISABLE")
-target_link_libraries(avcenc
-                      libavcenc
-                      Threads::Threads
-                      m)
+
+# add_executable(avcenc ${AVCENC_SRCS})
+# set_target_properties(avcenc
+#                       PROPERTIES COMPILE_FLAGS
+#                                  "-DARM -DMD5_DISABLE")
+# target_link_libraries(avcenc
+#                       libavcenc
+#                       Threads::Threads
+#                       m)
