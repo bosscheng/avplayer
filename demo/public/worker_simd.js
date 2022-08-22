@@ -578,7 +578,7 @@
 	      Module["asm"] = exports;
 	      wasmMemory = Module["asm"]["F"];
 	      updateGlobalBufferAndViews(wasmMemory.buffer);
-	      wasmTable = Module["asm"]["M"];
+	      wasmTable = Module["asm"]["J"];
 	      addOnInit(Module["asm"]["G"]);
 	      removeRunDependency();
 	    }
@@ -5418,33 +5418,33 @@
 	    "s": ___cxa_allocate_exception,
 	    "r": ___cxa_throw,
 	    "C": ___syscall_fcntl64,
-	    "v": ___syscall_openat,
+	    "w": ___syscall_openat,
 	    "u": __embind_register_bigint,
 	    "E": __embind_register_bool,
-	    "m": __embind_register_class,
-	    "l": __embind_register_class_constructor,
+	    "l": __embind_register_class,
+	    "k": __embind_register_class_constructor,
 	    "d": __embind_register_class_function,
 	    "D": __embind_register_emval,
-	    "o": __embind_register_float,
+	    "p": __embind_register_float,
 	    "c": __embind_register_integer,
 	    "b": __embind_register_memory_view,
-	    "p": __embind_register_std_string,
-	    "k": __embind_register_std_wstring,
+	    "o": __embind_register_std_string,
+	    "j": __embind_register_std_wstring,
 	    "q": __embind_register_void,
-	    "j": __emscripten_date_now,
-	    "f": __emval_call_void_method,
+	    "i": __emscripten_date_now,
+	    "e": __emval_call_void_method,
 	    "g": __emval_decref,
-	    "e": __emval_get_method_caller,
+	    "f": __emval_get_method_caller,
 	    "a": _abort,
-	    "z": _emscripten_memcpy_big,
-	    "i": _emscripten_resize_heap,
-	    "x": _environ_get,
-	    "y": _environ_sizes_get,
+	    "A": _emscripten_memcpy_big,
+	    "v": _emscripten_resize_heap,
+	    "y": _environ_get,
+	    "z": _environ_sizes_get,
 	    "n": _fd_close,
-	    "w": _fd_fdstat_get,
+	    "x": _fd_fdstat_get,
 	    "B": _fd_read,
 	    "t": _fd_seek,
-	    "A": _fd_write,
+	    "m": _fd_write,
 	    "h": _setTempRet0
 	  };
 	  createWasm();
@@ -5462,15 +5462,15 @@
 	  };
 
 	  var ___errno_location = Module["___errno_location"] = function () {
-	    return (___errno_location = Module["___errno_location"] = Module["asm"]["J"]).apply(null, arguments);
+	    return (___errno_location = Module["___errno_location"] = Module["asm"]["K"]).apply(null, arguments);
 	  };
 
 	  var ___getTypeName = Module["___getTypeName"] = function () {
-	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["K"]).apply(null, arguments);
+	    return (___getTypeName = Module["___getTypeName"] = Module["asm"]["L"]).apply(null, arguments);
 	  };
 
 	  Module["___embind_register_native_and_builtin_types"] = function () {
-	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["L"]).apply(null, arguments);
+	    return (Module["___embind_register_native_and_builtin_types"] = Module["asm"]["M"]).apply(null, arguments);
 	  };
 
 	  var _emscripten_builtin_memalign = Module["_emscripten_builtin_memalign"] = function () {
@@ -5497,7 +5497,7 @@
 	    return (Module["dynCall_jiji"] = Module["asm"]["S"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 271061;
+	  Module["_ff_h264_cabac_tables"] = 258332;
 
 	  var calledRun;
 

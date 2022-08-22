@@ -27,8 +27,7 @@ emcc_args = [
     '-lembind',
     '-I.', '-Isrc/common', '-Ithirdparty/bde265/include', '-Ithirdparty/android/include', '-Ithirdparty/ffmpeg/include',
     '--post-js','./post.js',
-    '-msimd128',
-    '-flto'
+    '-msimd128'
 ]+["-s "+k+"="+str(v) for k, v in sargs.items()]
 
 print ('building...')
