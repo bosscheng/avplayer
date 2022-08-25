@@ -374,6 +374,7 @@ function HEVCParseSPS(SPS, hevc) {
   psps.pic_width_in_luma_samples = rbspBitop.read_golomb();
   psps.pic_height_in_luma_samples = rbspBitop.read_golomb();
   psps.conformance_window_flag = rbspBitop.read(1);
+
   if (psps.conformance_window_flag) {
     let vert_mult = 1 + (psps.chroma_format_idc < 2);
     let horiz_mult = 1 + (psps.chroma_format_idc < 3);
@@ -381,6 +382,12 @@ function HEVCParseSPS(SPS, hevc) {
     psps.conf_win_right_offset = rbspBitop.read_golomb() * horiz_mult;
     psps.conf_win_top_offset = rbspBitop.read_golomb() * vert_mult;
     psps.conf_win_bottom_offset = rbspBitop.read_golomb() * vert_mult;
+  } else {
+    
+    psps.conf_win_left_offset = 0;
+    psps.conf_win_right_offset = 0;
+    psps.conf_win_top_offset = 0;
+    psps.conf_win_bottom_offset = 0;
   }
   // Logger.debug(psps);
   return psps;
@@ -429,7 +436,7 @@ function readHEVCSpecificConfig(hevcSequenceHeader) {
       if (p.length < 3) {
         brak;
       }
-      let nalutype = p[0];
+      let nalutype = p[0]&0x3F;
       let n = (p[1]) << 8 | p[2];
       // Logger.debug(nalutype, n);
       p = p.slice(3);
