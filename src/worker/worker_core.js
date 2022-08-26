@@ -69,7 +69,7 @@ class WorkerCore {
         this._options = options;
 
         this._logger = new Logger();
-    //    this._logger.setLogEnable(true);
+       this._logger.setLogEnable(true);
 
         this._demuxer = new FLVDemuxer(this);     // demux stream to h264/h265 aac/pcmu/pcma
         this._stream = new FetchStream(this); //get strem from remote
@@ -255,13 +255,12 @@ class WorkerCore {
 
         let size = this._width*this._height*3/2;
         let out = this._Module.HEAPU8.subarray(yuv, yuv+size);
-
-        let data = Uint8Array.from(out);
+        
 
         this._yuvframerate++;
-        this._yuvbitrate += data.length;
+      //  this._yuvbitrate += out.length;
+        let data = new Uint8Array(out);
 
-        
         postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
 
     }

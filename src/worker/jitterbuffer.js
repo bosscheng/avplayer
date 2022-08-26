@@ -104,7 +104,7 @@ class JitterBuffer extends EventEmitter {
      
             this.emit('videopacket', avpacket);
 
-            break;
+         //   break;
 
         }
 
@@ -124,7 +124,7 @@ class JitterBuffer extends EventEmitter {
      
             this.emit('audiopacket', avpacket);
 
-            break;
+       //     break;
         }
 
         this.updateJitterBufferState();
