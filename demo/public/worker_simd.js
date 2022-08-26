@@ -5418,33 +5418,33 @@
 	    "s": ___cxa_allocate_exception,
 	    "r": ___cxa_throw,
 	    "C": ___syscall_fcntl64,
-	    "w": ___syscall_openat,
+	    "v": ___syscall_openat,
 	    "u": __embind_register_bigint,
 	    "E": __embind_register_bool,
-	    "l": __embind_register_class,
-	    "k": __embind_register_class_constructor,
+	    "m": __embind_register_class,
+	    "l": __embind_register_class_constructor,
 	    "d": __embind_register_class_function,
 	    "D": __embind_register_emval,
-	    "p": __embind_register_float,
+	    "o": __embind_register_float,
 	    "c": __embind_register_integer,
 	    "b": __embind_register_memory_view,
-	    "o": __embind_register_std_string,
-	    "j": __embind_register_std_wstring,
+	    "p": __embind_register_std_string,
+	    "k": __embind_register_std_wstring,
 	    "q": __embind_register_void,
-	    "i": __emscripten_date_now,
-	    "e": __emval_call_void_method,
+	    "j": __emscripten_date_now,
+	    "f": __emval_call_void_method,
 	    "g": __emval_decref,
-	    "f": __emval_get_method_caller,
+	    "e": __emval_get_method_caller,
 	    "a": _abort,
-	    "A": _emscripten_memcpy_big,
-	    "v": _emscripten_resize_heap,
-	    "y": _environ_get,
-	    "z": _environ_sizes_get,
+	    "z": _emscripten_memcpy_big,
+	    "i": _emscripten_resize_heap,
+	    "x": _environ_get,
+	    "y": _environ_sizes_get,
 	    "n": _fd_close,
-	    "x": _fd_fdstat_get,
+	    "w": _fd_fdstat_get,
 	    "B": _fd_read,
 	    "t": _fd_seek,
-	    "m": _fd_write,
+	    "A": _fd_write,
 	    "h": _setTempRet0
 	  };
 	  createWasm();
@@ -5497,7 +5497,7 @@
 	    return (Module["dynCall_jiji"] = Module["asm"]["S"]).apply(null, arguments);
 	  };
 
-	  Module["_ff_h264_cabac_tables"] = 258332;
+	  Module["_ff_h264_cabac_tables"] = 215708;
 
 	  var calledRun;
 
@@ -6448,6 +6448,11 @@
 	    psps.conf_win_right_offset = rbspBitop.read_golomb() * horiz_mult;
 	    psps.conf_win_top_offset = rbspBitop.read_golomb() * vert_mult;
 	    psps.conf_win_bottom_offset = rbspBitop.read_golomb() * vert_mult;
+	  } else {
+	    psps.conf_win_left_offset = 0;
+	    psps.conf_win_right_offset = 0;
+	    psps.conf_win_top_offset = 0;
+	    psps.conf_win_bottom_offset = 0;
 	  } // Logger.debug(psps);
 
 
@@ -6502,7 +6507,7 @@
 	        brak;
 	      }
 
-	      let nalutype = p[0];
+	      let nalutype = p[0] & 0x3F;
 	      let n = p[1] << 8 | p[2]; // Logger.debug(nalutype, n);
 
 	      p = p.slice(3);
@@ -6932,8 +6937,7 @@
 
 	      let avpacket = this._vgop.shift();
 
-	      this.emit('videopacket', avpacket);
-	      break;
+	      this.emit('videopacket', avpacket); //   break;
 	    }
 
 	    while (1) {
@@ -6947,8 +6951,7 @@
 
 	      let avpacket = this._agop.shift();
 
-	      this.emit('audiopacket', avpacket);
-	      break;
+	      this.emit('audiopacket', avpacket); //     break;
 	    }
 
 	    this.updateJitterBufferState();
@@ -7109,7 +7112,9 @@
 	    this._vDecoder = new this._Module.VideoDecoder(this);
 	    this._aDecoder = new this._Module.AudioDecoder(this);
 	    this._options = options;
-	    this._logger = new Logger(); //    this._logger.setLogEnable(true);
+	    this._logger = new Logger();
+
+	    this._logger.setLogEnable(true);
 
 	    this._demuxer = new FLVDemuxer(this); // demux stream to h264/h265 aac/pcmu/pcma
 
@@ -7265,9 +7270,9 @@
 
 	    let out = this._Module.HEAPU8.subarray(yuv, yuv + size);
 
-	    let data = Uint8Array.from(out);
-	    this._yuvframerate++;
-	    this._yuvbitrate += data.length;
+	    this._yuvframerate++; //  this._yuvbitrate += out.length;
+
+	    let data = new Uint8Array(out);
 	    postMessage({
 	      cmd: WORKER_EVENT_TYPE.yuvData,
 	      data,

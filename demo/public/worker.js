@@ -6448,6 +6448,11 @@
 	    psps.conf_win_right_offset = rbspBitop.read_golomb() * horiz_mult;
 	    psps.conf_win_top_offset = rbspBitop.read_golomb() * vert_mult;
 	    psps.conf_win_bottom_offset = rbspBitop.read_golomb() * vert_mult;
+	  } else {
+	    psps.conf_win_left_offset = 0;
+	    psps.conf_win_right_offset = 0;
+	    psps.conf_win_top_offset = 0;
+	    psps.conf_win_bottom_offset = 0;
 	  } // Logger.debug(psps);
 
 
@@ -6502,7 +6507,7 @@
 	        brak;
 	      }
 
-	      let nalutype = p[0];
+	      let nalutype = p[0] & 0x3F;
 	      let n = p[1] << 8 | p[2]; // Logger.debug(nalutype, n);
 
 	      p = p.slice(3);
@@ -6932,8 +6937,7 @@
 
 	      let avpacket = this._vgop.shift();
 
-	      this.emit('videopacket', avpacket);
-	      break;
+	      this.emit('videopacket', avpacket); //   break;
 	    }
 
 	    while (1) {
@@ -6947,8 +6951,7 @@
 
 	      let avpacket = this._agop.shift();
 
-	      this.emit('audiopacket', avpacket);
-	      break;
+	      this.emit('audiopacket', avpacket); //     break;
 	    }
 
 	    this.updateJitterBufferState();
@@ -7109,7 +7112,9 @@
 	    this._vDecoder = new this._Module.VideoDecoder(this);
 	    this._aDecoder = new this._Module.AudioDecoder(this);
 	    this._options = options;
-	    this._logger = new Logger(); //    this._logger.setLogEnable(true);
+	    this._logger = new Logger();
+
+	    this._logger.setLogEnable(true);
 
 	    this._demuxer = new FLVDemuxer(this); // demux stream to h264/h265 aac/pcmu/pcma
 
@@ -7265,9 +7270,9 @@
 
 	    let out = this._Module.HEAPU8.subarray(yuv, yuv + size);
 
-	    let data = Uint8Array.from(out);
-	    this._yuvframerate++;
-	    this._yuvbitrate += data.length;
+	    this._yuvframerate++; //  this._yuvbitrate += out.length;
+
+	    let data = new Uint8Array(out);
 	    postMessage({
 	      cmd: WORKER_EVENT_TYPE.yuvData,
 	      data,
