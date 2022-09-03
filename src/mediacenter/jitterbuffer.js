@@ -37,7 +37,7 @@ class JitterBuffer extends EventEmitter {
           }, 1000);
 
 
-        let sec = 16; // 100 fps
+        let sec = 10; // 100 fps
 
         this._playTimer = setInterval(() => {
 

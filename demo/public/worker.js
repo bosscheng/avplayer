@@ -1287,7 +1287,7 @@
       this._statisticTimer = setInterval(() => {
         this._player._logger.info('jitterbuffer', `video packet ${this._vgop.length} audio packet ${this._agop.length}`);
       }, 1000);
-      let sec = 16; // 100 fps
+      let sec = 10; // 100 fps
 
       this._playTimer = setInterval(() => {
         this.playTicket();
@@ -1581,7 +1581,8 @@
       let yuvBuf = this.module.HEAPU8.subarray(yuvArray, yuvArray + size * 3 / 2);
       let vFrame = {
         pixelType: 'I420',
-        data: new Uint8Array(yuvBuf),
+        data: yuvBuf,
+        //new Uint8Array(yuvBuf),
         width: this.width,
         height: this.height,
         pts: pts
@@ -16067,13 +16068,14 @@
               });
             });
             streamCore.on('yuvData', (data, width, height, timestamp) => {
+              let copyData = new Uint8Array(data);
               postMessage({
                 cmd: WORKER_EVENT_TYPE.yuvData,
-                data,
+                data: copyData,
                 width,
                 height,
                 timestamp
-              }, [data.buffer]);
+              }, [copyData.buffer]);
             });
             streamCore.on('audioInfo', (atype, sampleRate, channels, samplesPerPacket) => {
               postMessage({

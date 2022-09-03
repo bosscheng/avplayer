@@ -86,7 +86,7 @@ export class VideoDecoderSoftBase extends EventEmitter {
 
         let vFrame = {
             pixelType: 'I420',
-            data: new Uint8Array(yuvBuf),
+            data: yuvBuf, //new Uint8Array(yuvBuf),
             width: this.width,
             height: this.height,
             pts: pts

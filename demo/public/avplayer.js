@@ -3705,7 +3705,7 @@ void main(void) {
         this._statisticTimer = setInterval(() => {
           this._player._logger.info('jitterbuffer', `video packet ${this._vgop.length} audio packet ${this._agop.length}`);
         }, 1000);
-        let sec = 16; // 100 fps
+        let sec = 10; // 100 fps
 
         this._playTimer = setInterval(() => {
           this.playTicket();
@@ -3999,7 +3999,8 @@ void main(void) {
         let yuvBuf = this.module.HEAPU8.subarray(yuvArray, yuvArray + size * 3 / 2);
         let vFrame = {
           pixelType: 'I420',
-          data: new Uint8Array(yuvBuf),
+          data: yuvBuf,
+          //new Uint8Array(yuvBuf),
           width: this.width,
           height: this.height,
           pts: pts

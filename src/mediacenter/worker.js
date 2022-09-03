@@ -33,7 +33,8 @@ function workerRun() {
 
                 streamCore.on('yuvData', (data, width, height, timestamp) => {
 
-                    postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width, height, timestamp}, [data.buffer]);
+                    let copyData = new Uint8Array(data);
+                    postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data:copyData, width, height, timestamp}, [copyData.buffer]);
                 })
 
                 streamCore.on('audioInfo', (atype, sampleRate, channels, samplesPerPacket) => {
