@@ -17,30 +17,7 @@ class MediaCenter extends EventEmitter  {
 
         this._player._logger.info('mediacenter', `start worker thread ${player._options.decoderMode}`);
 
-        let workerfile = '';
-
-        if (player._options.decoderMode === 'normal') {
-
-            workerfile = 'worker.js';
-
-        } else if (player._options.decoderMode === 'simd') {
-
-            workerfile = 'worker_simd.js';
-
-        } else if (player._options.decoderMode === 'simd_1') {
-
-            workerfile = 'worker_simd_1.js';
-        } else if (player._options.decoderMode === 'simd_2') {
-
-            workerfile = 'worker_simd_2.js'; 
-        } else {
-
-            this._player._logger.console.error();('mediacenter', `decoderMode not support ${player._options.decoderMode}`);
-            return;
-        }
-
-
-        this._mediacenterWorker = new Worker(workerfile);
+        this._mediacenterWorker = new Worker('worker.js');
 
         this._mediacenterWorker.onmessageerror = (event) => {
 
@@ -66,11 +43,6 @@ class MediaCenter extends EventEmitter  {
                     this.emit('inited');
                     break;
 
-                }
-
-                case WORKER_EVENT_TYPE.reseted: {
-
-                    break;
                 }
 
                 case WORKER_EVENT_TYPE.destroyed: {
@@ -147,7 +119,7 @@ class MediaCenter extends EventEmitter  {
 
     destroy() {
 
-        this.off();
+        this.removeAllListeners();
         this._isDestoryed = true;
         this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.destroy});
         this._player._logger.info('MediaCenter', 'MediaCenter destroy');

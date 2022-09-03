@@ -225,7 +225,7 @@ class AudioPlayer extends EventEmitter {
     destroy() {
 
         this.clear();
-        this.off();
+        this.removeAllListeners();
         this._player._logger.info('AudioPlayer', 'AudioPlayer destroy');
     }
 

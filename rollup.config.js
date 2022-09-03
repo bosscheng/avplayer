@@ -64,19 +64,15 @@ const baseConfig = {
         copy({
             targets: [
                 {
-                    src: "src/decoder/decoder.wasm",
+                    src: "wasm/out/audiodec.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
                 },
                 {
-                    src: "src/decoder/decoder_simd.wasm",
+                    src: "wasm/out/videodec.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
                 },
                 {
-                    src: "src/decoder/decoder_simd_1.wasm",
-                    dest: isProd ? 'dist' : 'demo/public'
-                },
-                {
-                    src: "src/decoder/decoder_simd_2.wasm",
+                    src: "wasm/out/videodec_simd.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
                 }
             ]
@@ -114,30 +110,6 @@ export default [
         output: {
             name: 'worker',
             file: isProd ? 'dist/worker.js' : 'demo/public/worker.js',
-        },
-        plugins: []
-    },
-    {
-        input: 'src/worker/worker_simd.js',
-        output: {
-            name: 'worker',
-            file: isProd ? 'dist/worker_simd.js' : 'demo/public/worker_simd.js',
-        },
-        plugins: []
-    },
-    {
-        input: 'src/worker/worker_simd_1.js',
-        output: {
-            name: 'worker',
-            file: isProd ? 'dist/worker_simd_1.js' : 'demo/public/worker_simd_1.js',
-        },
-        plugins: []
-    },
-    {
-        input: 'src/worker/worker_simd_2.js',
-        output: {
-            name: 'worker',
-            file: isProd ? 'dist/worker_simd_2.js' : 'demo/public/worker_simd_2.js',
         },
         plugins: []
     }

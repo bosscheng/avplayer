@@ -73,7 +73,7 @@ class JitterBuffer extends EventEmitter {
             clearInterval(this._statisticTimer);
         }
 
-        this.off();
+        this.removeAllListeners();
 
         this._player._logger.info('JitterBuffer', 'JitterBuffer destroy');
     }

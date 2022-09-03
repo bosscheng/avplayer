@@ -1,19 +1,24 @@
-
-// import decModule from './decoder/decoder'
-// import decSIMDModule from './decoder/decoder_simd'
-
-import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from '../constant';
-import { AVPacket } from '../utils/av';
-import { AVType } from '../constant';
 import SpliteBuffer from '../utils/splitebuffer';
 import { caculateSamplesPerPacket } from '../utils';
 import Logger from '../utils/logger.js';
 import FLVDemuxer from '../demuxer/flvdemuxer.js';
 import FetchStream from '../stream/fetchstream.js';
 import JitterBuffer from './jitterbuffer';
+import {AudioDecoder, VideoDecoder} from '../decoder/index';
+import EventEmitter from 'eventemitter3';
 
 
-class WorkerCore {
+const DecodePacketType = {
+
+    VideoInfo: 0x1,
+    VideoData: 0x2,
+    AudioInfo: 0x3,
+    AudioData: 0x4
+
+};
+
+
+class WorkerCore extends EventEmitter {
 
     _vDecoder = undefined;
     _aDecoder = undefined;
@@ -48,23 +53,22 @@ class WorkerCore {
     _pcmframerate = 0;
     _pcmbitrate = 0;
 
-
     _statsec = 1;
 
     _lastts;
     _curpts;
 
-    _Module = undefined;
 
     _jitterBuffer = undefined;
 
 
-    constructor(options, Module) {
+    _deocodeList = [];
+    _decodeStart = false;
 
-        this._Module = Module;
 
-        this._vDecoder = new this._Module.VideoDecoder(this);
-        this._aDecoder = new this._Module.AudioDecoder(this);
+    constructor(options) {
+
+        super()
 
         this._options = options;
 
@@ -104,8 +108,117 @@ class WorkerCore {
                 this._pcmbitrate = 0;
 
             }, this._statsec*1000);
+    }
 
 
+    decodePacket(dpacket) {
+
+        this._deocodeList.push(dpacket);
+
+        this.tryDecode()
+
+    }
+
+    async createVideoDecoder() {
+
+        if (!this._vDecoder) {
+
+            this._vDecoder = new VideoDecoder(this._options.decoderMode);
+            await this._vDecoder.initialize();
+
+            this._vDecoder.on("videoCodecInfo", (videoCodecInfo) => {
+                this.handleVideoCodecInfo(videoCodecInfo);
+            });
+            this._vDecoder.on("videoFrame", (videoFrame) => {
+
+                this.handleVideoFrame(videoFrame);
+            });
+        }
+
+    }
+
+    async createAudioDecoder() {
+
+        if (!this._aDecoder) {
+
+            this._aDecoder = new AudioDecoder("soft");
+            await this._aDecoder.initialize();
+            
+            this._aDecoder.on("audioCodecInfo", (audioCodecInfo) => {
+                this.handleAudioCodecInfo(audioCodecInfo);
+            });
+            this._aDecoder.on("audioFrame", (audioFrame) => {
+                this.handleAudioFrame(audioFrame);
+            })
+        }
+
+    }
+
+   async tryDecode() {
+
+        if (this._decodeStart) {
+
+            return;
+        }
+
+        if (this._deocodeList.length == 0) {
+
+            return;
+        }
+
+        this._decodeStart = true;
+
+        let dpacket = this._deocodeList.shift();
+
+        if (dpacket.dptype == DecodePacketType.VideoInfo) {
+
+            await this.createVideoDecoder();
+
+            let config = {videoType:dpacket.vtype, extraData:dpacket.extradata};
+
+            this._vDecoder.configure(config);
+
+        } else if (dpacket.dptype == DecodePacketType.AudioInfo) {
+
+            await this.createAudioDecoder();
+
+            let config = {audioType:dpacket.atype, extraData:dpacket.extradata};
+
+            this._aDecoder.configure(config);
+
+
+        } else if (dpacket.dptype == DecodePacketType.VideoData) {
+
+            let packet = {
+
+                data:dpacket.payload,
+                keyFrame:dpacket.iskeyframe ? 1 : 0,
+                pts:dpacket.timestamp
+
+            }
+
+            this._vDecoder.decode(packet);
+
+            
+        } else if (dpacket.dptype == DecodePacketType.AudioData) {
+
+            let packet = {
+
+                data:dpacket.payload,
+                pts:dpacket.timestamp
+            }
+
+            this._aDecoder.decode(packet);
+
+            
+        } else {
+
+            this._logger.error('WorkerCore', `decode error invalid decodetype ${dpacket.dptype}`);
+        }
+
+        this._decodeStart = false;
+
+        this.tryDecode();
 
     }
 
@@ -120,7 +233,6 @@ class WorkerCore {
         this._stream.on('retry', () => {
 
             this.reset();
-            postMessage({cmd: WORKER_EVENT_TYPE.reseted});
 
         });
 
@@ -134,8 +246,9 @@ class WorkerCore {
 
             this._logger.info('WorkerCore', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
+           let dpacket = {dptype: DecodePacketType.VideoInfo, vtype:videoinfo.vtype, extradata: videoinfo.extradata};
 
-            this._vDecoder.setCodec(videoinfo.vtype, videoinfo.extradata);
+           this.decodePacket(dpacket);
         })
 
         this._demuxer.on('audioinfo', (audioinfo) => {
@@ -143,7 +256,9 @@ class WorkerCore {
 
             this._logger.info('WorkerCore', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
-            this._aDecoder.setCodec(audioinfo.atype, audioinfo.extradata);
+          let dpacket = {dptype: DecodePacketType.AudioInfo, atype:audioinfo.atype, extradata: audioinfo.extradata};
+
+          this.decodePacket(dpacket);
 
         })
 
@@ -151,7 +266,6 @@ class WorkerCore {
 
             this._vframerate++;
             this._vbitrate += packet.payload.length;
-
 
             packet.timestamp = this.adjustTime(packet.timestamp);
 
@@ -171,12 +285,17 @@ class WorkerCore {
 
         this._jitterBuffer.on('videopacket', (packet) => {
 
-            this._vDecoder.decode(packet.payload, packet.iskeyframe ? 1 : 0, packet.timestamp);
+            packet.dptype = DecodePacketType.VideoData;
+
+            this.decodePacket(packet);
+
         })
 
         this._jitterBuffer.on('audiopacket', (packet) => {
 
-            this._aDecoder.decode(packet.payload, packet.timestamp);
+           packet.dptype = DecodePacketType.AudioData;
+
+           this.decodePacket(packet);
         })
 
     }
@@ -184,10 +303,12 @@ class WorkerCore {
     
     destroy() {
 
+        this.removeAllListeners();
+
         this.reset();
 
-        this._aDecoder.clear();
-        this._vDecoder.clear();
+        this._aDecoder.close();
+        this._vDecoder.close();
 
         this._aDecoder = undefined;
         this._vDecoder = undefined;
@@ -204,8 +325,6 @@ class WorkerCore {
 
     }
     
-
-
     reset() {
 
         this._logger.info('WorkerCore', `work thiread reset, clear gop buffer & reset all Params`);
@@ -228,50 +347,35 @@ class WorkerCore {
         
     }
 
-    setVideoCodec(vtype, extradata) {
-
-        this._vDecoder.setCodec(vtype, extradata);
-    }
-
-    setAudioCodec(atype, extradata) {
-
-        this._aDecoder.setCodec(atype, extradata);
-    }
 
     //callback
-    videoInfo(vtype, width, height) {
+    handleVideoCodecInfo(videoCodeInfo) {
 
-        this._width = width;
-        this._height = height;
+        this._width = videoCodeInfo.width;
+        this._height = videoCodeInfo.height;
 
-        this._logger.info('WorkerCore', `videoInfo width ${width} height ${height}`);
+        this._logger.info('WorkerCore', `videoInfo width ${videoCodeInfo.width} height ${videoCodeInfo.height}`);
 
-        postMessage({cmd: WORKER_EVENT_TYPE.videoInfo, vtype, width, height})
+        this.emit('videoInfo', videoCodeInfo.videoType, videoCodeInfo.width, videoCodeInfo.height);
+
     }
 
-    yuvData(yuv, timestamp) {
-
-    //    this._logger.info('WorkerCore', `yuvdata timestamp ${timestamp}`);
-
-        let size = this._width*this._height*3/2;
-        let out = this._Module.HEAPU8.subarray(yuv, yuv+size);
-        
+    handleVideoFrame(videoFrame) {
 
         this._yuvframerate++;
-      //  this._yuvbitrate += out.length;
-        let data = new Uint8Array(out);
-
-        postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width:this._width, height:this._height, timestamp}, [data.buffer]);
-
+    
+        this.emit('yuvData', videoFrame.data, videoFrame.width, videoFrame.height, videoFrame.pts);
     }
 
-    audioInfo(atype, sampleRate, channels) {
+    handleAudioCodecInfo(audioCodeInfo) {
 
-        this._sampleRate = sampleRate;
-        this._channels = channels;
-        this._samplesPerPacket = caculateSamplesPerPacket(sampleRate);
+        this._sampleRate = audioCodeInfo.sampleRate;
+        this._channels = audioCodeInfo.channels;
+        this._samplesPerPacket = caculateSamplesPerPacket(audioCodeInfo.sampleRate);
 
-        postMessage({cmd: WORKER_EVENT_TYPE.audioInfo, atype, sampleRate, channels, samplesPerPacket:this._samplesPerPacket });
+
+        this.emit('audioInfo', audioCodeInfo.audioType, audioCodeInfo.sampleRate, audioCodeInfo.channels, this._samplesPerPacket);
+
     }
 
 
@@ -316,27 +420,22 @@ class WorkerCore {
 
     }
 
-    pcmData(pcmDataArray, samples, timestamp) {
+    handleAudioFrame(audioFrame) {
 
     //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
-        let datas = [];
 
         this._pcmframerate++;
 
-
         for (let i = 0; i < this._channels; i++) {
-            var fp = this._Module.HEAPU32[(pcmDataArray >> 2) + i] >> 2;
-            datas.push(Float32Array.of(...this._Module.HEAPF32.subarray(fp, fp + samples)));
 
-            this._pcmbitrate += datas[i].length*4;
+            this._pcmbitrate += audioFrame.datas[i].length*4;
         }
 
         if (!this._useSpliteBuffer) {
 
-            if(samples === this._samplesPerPacket) {
+            if(audioFrame.sampleNum === this._samplesPerPacket) {
 
-                postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, timestamp}, datas.map(x => x.buffer));
-
+                this.emit('pcmData', audioFrame.datas, audioFrame.pts);
                 return;
             }
 
@@ -344,11 +443,11 @@ class WorkerCore {
             this._useSpliteBuffer = true;
         } 
 
-        this._spliteBuffer.addBuffer(datas, timestamp);
+        this._spliteBuffer.addBuffer(audioFrame.datas, timestamp);
 
         this._spliteBuffer.splite((buffers, ts) => {
 
-            postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas:buffers, timestamp:ts}, buffers.map(x => x.buffer));
+            this.emit('pcmData', buffers, ts);
 
         });
 

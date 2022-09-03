@@ -447,7 +447,6 @@
     const WORKER_EVENT_TYPE = {
       created: 'created',
       inited: 'inited',
-      reseted: 'reseted',
       destroyed: 'destroyed',
       videoInfo: 'videoInfo',
       yuvData: 'yuvData',
@@ -2460,24 +2459,7 @@ void main(void) {
 
         this._player._logger.info('mediacenter', `start worker thread ${player._options.decoderMode}`);
 
-        let workerfile = '';
-
-        if (player._options.decoderMode === 'normal') {
-          workerfile = 'worker.js';
-        } else if (player._options.decoderMode === 'simd') {
-          workerfile = 'worker_simd.js';
-        } else if (player._options.decoderMode === 'simd_1') {
-          workerfile = 'worker_simd_1.js';
-        } else if (player._options.decoderMode === 'simd_2') {
-          workerfile = 'worker_simd_2.js';
-        } else {
-          this._player._logger.console.error();
-
-          `decoderMode not support ${player._options.decoderMode}`;
-          return;
-        }
-
-        this._mediacenterWorker = new Worker(workerfile);
+        this._mediacenterWorker = new Worker('worker.js');
 
         this._mediacenterWorker.onmessageerror = event => {
           this._player._logger.info('mediacenter', `start worker thread err ${event}`);
@@ -2500,11 +2482,6 @@ void main(void) {
             case WORKER_EVENT_TYPE.inited:
               {
                 this.emit('inited');
-                break;
-              }
-
-            case WORKER_EVENT_TYPE.reseted:
-              {
                 break;
               }
 
@@ -2561,7 +2538,7 @@ void main(void) {
       }
 
       destroy() {
-        this.off();
+        this.removeAllListeners();
         this._isDestoryed = true;
 
         this._mediacenterWorker.postMessage({
@@ -2770,7 +2747,7 @@ void main(void) {
 
       destroy() {
         this.clear();
-        this.off();
+        this.removeAllListeners();
 
         this._player._logger.info('AudioPlayer', 'AudioPlayer destroy');
       }
