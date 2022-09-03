@@ -106,7 +106,7 @@ export default [
         ],
     },
     {
-        input: 'src/worker/worker.js',
+        input: 'src/mediacenter/worker.js',
         output: {
             name: 'worker',
             file: isProd ? 'dist/worker.js' : 'demo/public/worker.js',

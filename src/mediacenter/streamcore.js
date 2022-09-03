@@ -1,6 +1,5 @@
 import SpliteBuffer from '../utils/splitebuffer';
 import { caculateSamplesPerPacket } from '../utils';
-import Logger from '../utils/logger.js';
 import FLVDemuxer from '../demuxer/flvdemuxer.js';
 import FetchStream from '../stream/fetchstream.js';
 import JitterBuffer from './jitterbuffer';
@@ -18,7 +17,7 @@ const DecodePacketType = {
 };
 
 
-class WorkerCore extends EventEmitter {
+class StreamCore extends EventEmitter {
 
     _vDecoder = undefined;
     _aDecoder = undefined;
@@ -29,8 +28,6 @@ class WorkerCore extends EventEmitter {
     _sampleRate = 0;
     _channels = 0;
     _samplesPerPacket = 0;
-
-    _options = undefined;
 
     _gop = [];
 
@@ -57,6 +54,7 @@ class WorkerCore extends EventEmitter {
 
     _lastts;
     _curpts;
+    _player;
 
 
     _jitterBuffer = undefined;
@@ -66,18 +64,15 @@ class WorkerCore extends EventEmitter {
     _decodeStart = false;
 
 
-    constructor(options) {
+    constructor(player) {
 
         super()
 
-        this._options = options;
+        this._player = player;
 
-        this._logger = new Logger();
-       this._logger.setLogEnable(true);
-
-        this._demuxer = new FLVDemuxer(this);     // demux stream to h264/h265 aac/pcmu/pcma
-        this._stream = new FetchStream(this); //get strem from remote
-        this._jitterBuffer = new JitterBuffer(this);
+        this._demuxer = new FLVDemuxer(player);     // demux stream to h264/h265 aac/pcmu/pcma
+        this._stream = new FetchStream(player); //get strem from remote
+        this._jitterBuffer = new JitterBuffer(player);
 
         this.registerEvents();
 
@@ -90,7 +85,7 @@ class WorkerCore extends EventEmitter {
                 let diff = (now - this._lastStatTs)/1000;
                 this._lastStatTs = now;
                     
-                this._logger.info('WCSTAT', `------ WORKER CORE STAT ${diff} ---------
+                this._player._logger.info('WCSTAT', `------ WORKER CORE STAT ${diff} ---------
                 video gen framerate:${this._vframerate/diff} bitrate:${this._vbitrate*8/diff/1024/1024}M
                 audio gen framerate:${this._aframerate/diff} bitrate:${this._abitrate*8/diff}
                 yuv   gen framerate:${this._yuvframerate/diff} bitrate:${this._yuvbitrate*8/diff}
@@ -115,7 +110,7 @@ class WorkerCore extends EventEmitter {
 
         this._deocodeList.push(dpacket);
 
-        this.tryDecode()
+        this.tryDecode();
 
     }
 
@@ -123,7 +118,7 @@ class WorkerCore extends EventEmitter {
 
         if (!this._vDecoder) {
 
-            this._vDecoder = new VideoDecoder(this._options.decoderMode);
+            this._vDecoder = new VideoDecoder(this._player._options.decoderMode);
             await this._vDecoder.initialize();
 
             this._vDecoder.on("videoCodecInfo", (videoCodecInfo) => {
@@ -213,7 +208,7 @@ class WorkerCore extends EventEmitter {
             
         } else {
 
-            this._logger.error('WorkerCore', `decode error invalid decodetype ${dpacket.dptype}`);
+            this._player._logger.error('StreamCore', `decode error invalid decodetype ${dpacket.dptype}`);
         }
 
         this._decodeStart = false;
@@ -224,7 +219,7 @@ class WorkerCore extends EventEmitter {
 
     registerEvents() {
 
-        this._logger.info('WorkerCore', `now play ${this._options.url}`);
+        this._player._logger.info('StreamCore', `now play ${this._player._options.url}`);
 
         this._stream.on('finish', () => {
 
@@ -244,7 +239,7 @@ class WorkerCore extends EventEmitter {
 
         this._demuxer.on('videoinfo', (videoinfo) => {
 
-            this._logger.info('WorkerCore', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
+            this._player._logger.info('StreamCore', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
            let dpacket = {dptype: DecodePacketType.VideoInfo, vtype:videoinfo.vtype, extradata: videoinfo.extradata};
 
@@ -254,7 +249,7 @@ class WorkerCore extends EventEmitter {
         this._demuxer.on('audioinfo', (audioinfo) => {
 
 
-            this._logger.info('WorkerCore', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
+            this._player._logger.info('StreamCore', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
           let dpacket = {dptype: DecodePacketType.AudioInfo, atype:audioinfo.atype, extradata: audioinfo.extradata};
 
@@ -321,13 +316,13 @@ class WorkerCore extends EventEmitter {
         
         clearInterval(this._stattimer);
 
-        this._logger.info('WorkerCore', `WorkerCore destroy`);
+        this._player._logger.info('StreamCore', `StreamCore destroy`);
 
     }
     
     reset() {
 
-        this._logger.info('WorkerCore', `work thiread reset, clear gop buffer & reset all Params`);
+        this._player._logger.info('StreamCore', `work thiread reset, clear gop buffer & reset all Params`);
 
         this._gop = [];
         this._lastts = 0;
@@ -354,7 +349,7 @@ class WorkerCore extends EventEmitter {
         this._width = videoCodeInfo.width;
         this._height = videoCodeInfo.height;
 
-        this._logger.info('WorkerCore', `videoInfo width ${videoCodeInfo.width} height ${videoCodeInfo.height}`);
+        this._player._logger.info('StreamCore', `videoInfo width ${videoCodeInfo.width} height ${videoCodeInfo.height}`);
 
         this.emit('videoInfo', videoCodeInfo.videoType, videoCodeInfo.width, videoCodeInfo.height);
 
@@ -392,7 +387,7 @@ class WorkerCore extends EventEmitter {
 
             if (diff < -3000) {
 
-                this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
+                this._player._logger.warn('StreamCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
 
                 this._curpts -= 25;
                 this._lastts = timestamp;
@@ -401,7 +396,7 @@ class WorkerCore extends EventEmitter {
 
             } else if (diff > 3000) {
 
-               this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
+               this._player._logger.warn('StreamCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 
                 this._curpts += diff;
                 this._lastts = timestamp;
@@ -422,7 +417,7 @@ class WorkerCore extends EventEmitter {
 
     handleAudioFrame(audioFrame) {
 
-    //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
+    //     this._player._logger.info('StreamCore', `pcmData samples ${samples} timestamp${timestamp}`);
 
         this._pcmframerate++;
 
@@ -455,4 +450,4 @@ class WorkerCore extends EventEmitter {
 
 }
 
-export default WorkerCore;
+export default StreamCore;

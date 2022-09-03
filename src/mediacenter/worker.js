@@ -1,11 +1,12 @@
 import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE} from '../constant';
-import WorkerCore from './worker_core';
+import StreamCore from './streamcore';
+import Logger from '../utils/logger.js';
 
 function workerRun() {
 
     console.log('avplayer: worker start');
 
-    let workerCore = undefined;
+    let streamCore = undefined;
 
     //recv msg from main thread
     self.onmessage = function(event) {
@@ -15,24 +16,32 @@ function workerRun() {
 
             case WORKER_SEND_TYPE.init: {
 
-                workerCore = new WorkerCore(JSON.parse(msg.options));
+                let player = {
 
-                workerCore.on('videoInfo', (vtype, width, height) => {
+                    _options: JSON.parse(msg.options),
+                    _logger: new Logger()
+                }
+
+               player._logger.setLogEnable(true);
+
+                streamCore = new StreamCore(player);
+
+                streamCore.on('videoInfo', (vtype, width, height) => {
 
                     postMessage({cmd: WORKER_EVENT_TYPE.videoInfo, vtype, width, height})
                 })
 
-                workerCore.on('yuvData', (data, width, height, timestamp) => {
+                streamCore.on('yuvData', (data, width, height, timestamp) => {
 
                     postMessage({cmd: WORKER_EVENT_TYPE.yuvData, data, width, height, timestamp}, [data.buffer]);
                 })
 
-                workerCore.on('audioInfo', (atype, sampleRate, channels, samplesPerPacket) => {
+                streamCore.on('audioInfo', (atype, sampleRate, channels, samplesPerPacket) => {
 
                     postMessage({cmd: WORKER_EVENT_TYPE.audioInfo, atype, sampleRate, channels, samplesPerPacket});
                 })
 
-                workerCore.on('pcmData', (datas, timestamp) => {
+                streamCore.on('pcmData', (datas, timestamp) => {
 
                     postMessage({cmd: WORKER_EVENT_TYPE.pcmData, datas, timestamp}, datas.map(x => x.buffer));
                 })
@@ -44,8 +53,8 @@ function workerRun() {
 
             case WORKER_SEND_TYPE.destroy: {
 
-                workerCore.destroy();
-                workerCore = undefined;
+                streamCore.destroy();
+                streamCore = undefined;
 
                 postMessage({cmd: WORKER_EVENT_TYPE.destroyed});
                 

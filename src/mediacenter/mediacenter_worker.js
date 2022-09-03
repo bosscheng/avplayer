@@ -1,11 +1,16 @@
 import {WORKER_SEND_TYPE, WORKER_EVENT_TYPE, AVType} from '../constant'
 import EventEmitter from 'eventemitter3';
+import AudioPlayer from '../audio/audioplayer.js';
+import CanvasRender from '../render/canvasrender.js';
+import { PixelType } from '../constant/index.js';
 
-class MediaCenter extends EventEmitter  {
+class MediaCenterWorker extends EventEmitter  {
 
 
-    _mediacenterWorker = undefined;
+    _worker = undefined;
     _player;
+    _audioplayer = undefined;
+    _render = undefined;
 
     _isDestoryed = false;
 
@@ -17,21 +22,24 @@ class MediaCenter extends EventEmitter  {
 
         this._player._logger.info('mediacenter', `start worker thread ${player._options.decoderMode}`);
 
-        this._mediacenterWorker = new Worker('worker.js');
+        this._render = new CanvasRender(player);  // render yuv
+        this._audioplayer = new AudioPlayer(player); // play fltp
 
-        this._mediacenterWorker.onmessageerror = (event) => {
+        this._worker = new Worker('worker.js');
+
+        this._worker.onmessageerror = (event) => {
 
             this._player._logger.info('mediacenter', `start worker thread err ${event}`);
         };
 
-        this._mediacenterWorker.onmessage = (event) => {
+        this._worker.onmessage = (event) => {
 
             const msg = event.data;
             switch (msg.cmd) {
 
                 case WORKER_EVENT_TYPE.created: {
 
-                    this._mediacenterWorker.postMessage({
+                    this._worker.postMessage({
                                                 cmd: WORKER_SEND_TYPE.init,
                                                 options:JSON.stringify(this._player._options)});
                     break;
@@ -47,7 +55,7 @@ class MediaCenter extends EventEmitter  {
 
                 case WORKER_EVENT_TYPE.destroyed: {
 
-                    this._mediacenterWorker.terminate();
+                    this._worker.terminate();
                     break;
                 }
 
@@ -74,11 +82,15 @@ class MediaCenter extends EventEmitter  {
                         height:msg.height
                     }
 
+                    this._render.updateTexture(PixelType.YUV, packet.data, packet.width, packet.height);
+
                     this.emit('yuvdata', packet);
                     break;
                 }
 
                 case WORKER_EVENT_TYPE.audioInfo: {
+
+                    this._audioplayer.setAudioInfo(msg.atype, msg.sampleRate, msg.channels, msg.samplesPerPacket);
 
                     this.emit('audioinfo', msg.atype, msg.sampleRate, msg.channels, msg.samplesPerPacket);
                     break;
@@ -98,6 +110,8 @@ class MediaCenter extends EventEmitter  {
                         timestamp:msg.timestamp, 
        
                     }
+
+                    this._audioplayer.pushPcmData(packet);
 
                     this.emit('pcmdata', packet);
                     break;
@@ -120,14 +134,27 @@ class MediaCenter extends EventEmitter  {
     destroy() {
 
         this.removeAllListeners();
+        this._audioplayer.destroy();
+        this._render.destroy();
+
         this._isDestoryed = true;
-        this._mediacenterWorker.postMessage({cmd: WORKER_SEND_TYPE.destroy});
+        this._worker.postMessage({cmd: WORKER_SEND_TYPE.destroy});
         this._player._logger.info('MediaCenter', 'MediaCenter destroy');
  
+    }
+
+    unMute() {
+
+        this._audioplayer.unMute();
+    }
+
+    mute() {
+
+        this._audioplayer.mute();
     }
 
 }
 
 
 
-export default  MediaCenter;
+export default  MediaCenterWorker;

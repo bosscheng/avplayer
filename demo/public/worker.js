@@ -125,47 +125,6 @@
     return 1024;
   }
 
-  class Logger {
-    _logEnable = false;
-
-    constructor() {}
-
-    setLogEnable(logEnable) {
-      this._logEnable = logEnable;
-    }
-
-    info(module) {
-      if (this._logEnable) {
-        for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-          args[_key - 1] = arguments[_key];
-        }
-
-        console.log(`AVPlayer: [${module}]`, ...args);
-      }
-    }
-
-    warn(module) {
-      if (this._logEnable) {
-        for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-          args[_key2 - 1] = arguments[_key2];
-        }
-
-        console.warn(`AVPlayer: [${module}]`, ...args);
-      }
-    }
-
-    error(module) {
-      if (this._logEnable) {
-        for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
-          args[_key3 - 1] = arguments[_key3];
-        }
-
-        console.error(`AVPlayer: [${module}]`, ...args);
-      }
-    }
-
-  }
-
   function createCommonjsModule(fn, module) {
   	return module = { exports: {} }, fn(module, module.exports), module.exports;
   }
@@ -1328,7 +1287,7 @@
       this._statisticTimer = setInterval(() => {
         this._player._logger.info('jitterbuffer', `video packet ${this._vgop.length} audio packet ${this._agop.length}`);
       }, 1000);
-      let sec = 10; // 100 fps
+      let sec = 16; // 100 fps
 
       this._playTimer = setInterval(() => {
         this.playTicket();
@@ -15708,7 +15667,7 @@
     AudioData: 0x4
   };
 
-  class WorkerCore extends eventemitter3 {
+  class StreamCore extends eventemitter3 {
     _vDecoder = undefined;
     _aDecoder = undefined;
     _width = 0;
@@ -15716,7 +15675,6 @@
     _sampleRate = 0;
     _channels = 0;
     _samplesPerPacket = 0;
-    _options = undefined;
     _gop = [];
     _lastStatTs = undefined;
     _useSpliteBuffer = false;
@@ -15735,22 +15693,19 @@
     _statsec = 1;
     _lastts;
     _curpts;
+    _player;
     _jitterBuffer = undefined;
     _deocodeList = [];
     _decodeStart = false;
 
-    constructor(options) {
+    constructor(player) {
       super();
-      this._options = options;
-      this._logger = new Logger();
+      this._player = player;
+      this._demuxer = new FLVDemuxer(player); // demux stream to h264/h265 aac/pcmu/pcma
 
-      this._logger.setLogEnable(true);
+      this._stream = new FetchStream(player); //get strem from remote
 
-      this._demuxer = new FLVDemuxer(this); // demux stream to h264/h265 aac/pcmu/pcma
-
-      this._stream = new FetchStream(this); //get strem from remote
-
-      this._jitterBuffer = new JitterBuffer(this);
+      this._jitterBuffer = new JitterBuffer(player);
       this.registerEvents();
 
       this._stream.start();
@@ -15761,7 +15716,7 @@
         let diff = (now - this._lastStatTs) / 1000;
         this._lastStatTs = now;
 
-        this._logger.info('WCSTAT', `------ WORKER CORE STAT ${diff} ---------
+        this._player._logger.info('WCSTAT', `------ WORKER CORE STAT ${diff} ---------
                 video gen framerate:${this._vframerate / diff} bitrate:${this._vbitrate * 8 / diff / 1024 / 1024}M
                 audio gen framerate:${this._aframerate / diff} bitrate:${this._abitrate * 8 / diff}
                 yuv   gen framerate:${this._yuvframerate / diff} bitrate:${this._yuvbitrate * 8 / diff}
@@ -15787,7 +15742,7 @@
 
     async createVideoDecoder() {
       if (!this._vDecoder) {
-        this._vDecoder = new VideoDecoder(this._options.decoderMode);
+        this._vDecoder = new VideoDecoder(this._player._options.decoderMode);
         await this._vDecoder.initialize();
 
         this._vDecoder.on("videoCodecInfo", videoCodecInfo => {
@@ -15860,7 +15815,7 @@
 
         this._aDecoder.decode(packet);
       } else {
-        this._logger.error('WorkerCore', `decode error invalid decodetype ${dpacket.dptype}`);
+        this._player._logger.error('StreamCore', `decode error invalid decodetype ${dpacket.dptype}`);
       }
 
       this._decodeStart = false;
@@ -15868,7 +15823,7 @@
     }
 
     registerEvents() {
-      this._logger.info('WorkerCore', `now play ${this._options.url}`);
+      this._player._logger.info('StreamCore', `now play ${this._player._options.url}`);
 
       this._stream.on('finish', () => {});
 
@@ -15881,7 +15836,7 @@
       });
 
       this._demuxer.on('videoinfo', videoinfo => {
-        this._logger.info('WorkerCore', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
+        this._player._logger.info('StreamCore', `demux video info vtype:${videoinfo.vtype} width:${videoinfo.width} hight:${videoinfo.height}`);
 
         let dpacket = {
           dptype: DecodePacketType.VideoInfo,
@@ -15892,7 +15847,7 @@
       });
 
       this._demuxer.on('audioinfo', audioinfo => {
-        this._logger.info('WorkerCore', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
+        this._player._logger.info('StreamCore', `demux audio info atype:${audioinfo.atype} sample:${audioinfo.sample} channels:${audioinfo.channels} depth:${audioinfo.depth} aacprofile:${audioinfo.profile}`);
 
         let dpacket = {
           dptype: DecodePacketType.AudioInfo,
@@ -15948,11 +15903,11 @@
 
       clearInterval(this._stattimer);
 
-      this._logger.info('WorkerCore', `WorkerCore destroy`);
+      this._player._logger.info('StreamCore', `StreamCore destroy`);
     }
 
     reset() {
-      this._logger.info('WorkerCore', `work thiread reset, clear gop buffer & reset all Params`);
+      this._player._logger.info('StreamCore', `work thiread reset, clear gop buffer & reset all Params`);
 
       this._gop = [];
       this._lastts = 0;
@@ -15974,7 +15929,7 @@
       this._width = videoCodeInfo.width;
       this._height = videoCodeInfo.height;
 
-      this._logger.info('WorkerCore', `videoInfo width ${videoCodeInfo.width} height ${videoCodeInfo.height}`);
+      this._player._logger.info('StreamCore', `videoInfo width ${videoCodeInfo.width} height ${videoCodeInfo.height}`);
 
       this.emit('videoInfo', videoCodeInfo.videoType, videoCodeInfo.width, videoCodeInfo.height);
     }
@@ -15999,12 +15954,12 @@
         let diff = timestamp - this._lastts;
 
         if (diff < -3000) {
-          this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
+          this._player._logger.warn('StreamCore', `now ts ${timestamp}  - lastts ${this._lastts} < -1000, adjust now pts ${this._curpts}`);
 
           this._curpts -= 25;
           this._lastts = timestamp;
         } else if (diff > 3000) {
-          this._logger.warn('WorkerCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
+          this._player._logger.warn('StreamCore', `now ts ${timestamp}  - lastts ${this._lastts} > 1000, now pts ${this._curpts}`);
 
           this._curpts += diff;
           this._lastts = timestamp;
@@ -16018,7 +15973,7 @@
     }
 
     handleAudioFrame(audioFrame) {
-      //     this._logger.info('WorkerCore', `pcmData samples ${samples} timestamp${timestamp}`);
+      //     this._player._logger.info('StreamCore', `pcmData samples ${samples} timestamp${timestamp}`);
       this._pcmframerate++;
 
       for (let i = 0; i < this._channels; i++) {
@@ -16044,9 +15999,50 @@
 
   }
 
+  class Logger {
+    _logEnable = false;
+
+    constructor() {}
+
+    setLogEnable(logEnable) {
+      this._logEnable = logEnable;
+    }
+
+    info(module) {
+      if (this._logEnable) {
+        for (var _len = arguments.length, args = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+          args[_key - 1] = arguments[_key];
+        }
+
+        console.log(`AVPlayer: [${module}]`, ...args);
+      }
+    }
+
+    warn(module) {
+      if (this._logEnable) {
+        for (var _len2 = arguments.length, args = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+          args[_key2 - 1] = arguments[_key2];
+        }
+
+        console.warn(`AVPlayer: [${module}]`, ...args);
+      }
+    }
+
+    error(module) {
+      if (this._logEnable) {
+        for (var _len3 = arguments.length, args = new Array(_len3 > 1 ? _len3 - 1 : 0), _key3 = 1; _key3 < _len3; _key3++) {
+          args[_key3 - 1] = arguments[_key3];
+        }
+
+        console.error(`AVPlayer: [${module}]`, ...args);
+      }
+    }
+
+  }
+
   function workerRun() {
     console.log('avplayer: worker start');
-    let workerCore = undefined; //recv msg from main thread
+    let streamCore = undefined; //recv msg from main thread
 
     self.onmessage = function (event) {
       var msg = event.data;
@@ -16054,8 +16050,15 @@
       switch (msg.cmd) {
         case WORKER_SEND_TYPE.init:
           {
-            workerCore = new WorkerCore(JSON.parse(msg.options));
-            workerCore.on('videoInfo', (vtype, width, height) => {
+            let player = {
+              _options: JSON.parse(msg.options),
+              _logger: new Logger()
+            };
+
+            player._logger.setLogEnable(true);
+
+            streamCore = new StreamCore(player);
+            streamCore.on('videoInfo', (vtype, width, height) => {
               postMessage({
                 cmd: WORKER_EVENT_TYPE.videoInfo,
                 vtype,
@@ -16063,7 +16066,7 @@
                 height
               });
             });
-            workerCore.on('yuvData', (data, width, height, timestamp) => {
+            streamCore.on('yuvData', (data, width, height, timestamp) => {
               postMessage({
                 cmd: WORKER_EVENT_TYPE.yuvData,
                 data,
@@ -16072,7 +16075,7 @@
                 timestamp
               }, [data.buffer]);
             });
-            workerCore.on('audioInfo', (atype, sampleRate, channels, samplesPerPacket) => {
+            streamCore.on('audioInfo', (atype, sampleRate, channels, samplesPerPacket) => {
               postMessage({
                 cmd: WORKER_EVENT_TYPE.audioInfo,
                 atype,
@@ -16081,7 +16084,7 @@
                 samplesPerPacket
               });
             });
-            workerCore.on('pcmData', (datas, timestamp) => {
+            streamCore.on('pcmData', (datas, timestamp) => {
               postMessage({
                 cmd: WORKER_EVENT_TYPE.pcmData,
                 datas,
@@ -16096,8 +16099,8 @@
 
         case WORKER_SEND_TYPE.destroy:
           {
-            workerCore.destroy();
-            workerCore = undefined;
+            streamCore.destroy();
+            streamCore = undefined;
             postMessage({
               cmd: WORKER_EVENT_TYPE.destroyed
             });
