@@ -18409,7 +18409,7 @@ void main(void) {
           this._useSpliteBuffer = true;
         }
 
-        this._spliteBuffer.addBuffer(audioFrame.datas, timestamp);
+        this._spliteBuffer.addBuffer(audioFrame.datas, audioFrame.pts);
 
         this._spliteBuffer.splite((buffers, ts) => {
           this.emit('pcmData', buffers, ts);
