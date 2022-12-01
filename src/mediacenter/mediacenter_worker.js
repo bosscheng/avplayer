@@ -153,6 +153,11 @@ class MediaCenterWorker extends EventEmitter  {
         this._audioplayer.mute();
     }
 
+    switchRender(renderMode) {
+
+        this._render.switchRender(renderMode);
+
+    }
 }
 
 

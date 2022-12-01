@@ -175,7 +175,7 @@ class AVPlayer extends EventEmitter{
 
     switchRender(renderMode) {
 
-        this._render.switchRender(renderMode);
+        this._mediacenter.switchRender(renderMode);
 
     }
 
