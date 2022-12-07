@@ -21,7 +21,8 @@ const DEFAULT_PLAYER_OPTIONS = {
 
     useWorker:false,
 
-    decoderMode:"normal"
+    decoderMode:"normal",
+    faceDetectMode:"off"
 }
 
 class AVPlayer extends EventEmitter{

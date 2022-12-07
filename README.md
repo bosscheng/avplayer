@@ -2,15 +2,24 @@
     avplayer 是一个流媒体播放器，支持http-flv格式流，主要特性
     
     （1） 视频支持 h264/h265, 支持I/P/B帧
+
     （2） 声音支持aac/pcmu/pcma
+
     （3） 解码支持两种模式：
             soft: 正常软解码
             soft-simd:   支持SIMD加速软解码
+
      (4)  实现了自定义的渲染方式renderMode
             normal: 正常渲染
             green: 图像如果带绿幕，绿幕部分抠图成透明
             mask：图像右半部分带掩码图，则左半部显示并抠图成透明
             cube: 渲染立方体显示
+
+     (5) 支持人脸检测，使用Opencv 基于DNN的人脸检测技术       
+            off: 关闭检测人脸
+            soft: 正常检测人脸
+            soft-simd:   支持SIMD加速检测人脸
+            soft-simd-mt:   支持SIMD加速+多线程检测人脸，（有CORS同源要求，需要配置同源策略，如果只是本地测试，可以使用命令 "C:\Program Files\Google\Chrome\Application\chrome.exe" --enable-features=SharedArrayBuffer 启动chrome后就可以绕开同源策略 ）
 
 
 
@@ -52,6 +61,13 @@
 
         cd wasm
         python3 make_videodec_simd.py     
+
+    (7) 编译 r人脸检测 wasm 
+
+        cd wasm
+        python3 make_facedetector.py 
+        python3 make_facedetector_simd.py 
+        python3 make_facedetector_simd_mt.py        
 
 
 # 工程打包

@@ -23,7 +23,8 @@ const baseConfig = {
         globals: {
             "path": "path",
             "fs": "fs",
-            "crypto": "crypto"
+            "crypto": "crypto",
+            "shims":"shims",
         }
     },
     plugins: [
@@ -32,6 +33,7 @@ const baseConfig = {
         }),
         commonjs(),
         babel({
+            compact: false,
             runtimeHelpers: true,
             exclude: 'node_modules/**',
             presets: [
@@ -40,6 +42,7 @@ const baseConfig = {
                     {
                         modules: false,
                     },
+                   
                 ],
             ],
             plugins: ['@babel/plugin-external-helpers', '@babel/plugin-transform-runtime'],
@@ -73,6 +76,18 @@ const baseConfig = {
                 },
                 {
                     src: "wasm/out/videodec_simd.wasm",
+                    dest: isProd ? 'dist' : 'demo/public'
+                },
+                {
+                    src: "wasm/out/facedetector.wasm",
+                    dest: isProd ? 'dist' : 'demo/public'
+                },
+                {
+                    src: "wasm/out/facedetector_simd.wasm",
+                    dest: isProd ? 'dist' : 'demo/public'
+                },
+                {
+                    src: "wasm/out/facedetector_simd_mt.wasm",
                     dest: isProd ? 'dist' : 'demo/public'
                 }
             ]

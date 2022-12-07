@@ -5,6 +5,7 @@ import FetchStream from '../stream/fetchstream.js';
 import JitterBuffer from './jitterbuffer';
 import {AudioDecoder, VideoDecoder} from '../decoder/index';
 import EventEmitter from 'eventemitter3';
+import {FaceDetector} from '../ai/index';
 
 
 const DecodePacketType = {
@@ -21,6 +22,7 @@ class StreamCore extends EventEmitter {
 
     _vDecoder = undefined;
     _aDecoder = undefined;
+    _faceDetector = undefined;
 
     _width = 0;
     _height = 0;
@@ -128,6 +130,14 @@ class StreamCore extends EventEmitter {
 
                 this.handleVideoFrame(videoFrame);
             });
+
+
+            if (this._player._options.faceDetectMode != "off") {
+
+                this._faceDetector = new FaceDetector(this._player._options.faceDetectMode);
+                await this._faceDetector.initialize();
+            }
+
         }
 
     }
@@ -308,6 +318,8 @@ class StreamCore extends EventEmitter {
         this._aDecoder = undefined;
         this._vDecoder = undefined;
 
+        this._faceDetector?.close();
+        this._faceDetector = undefined;
 
         this._stream.destroy();
 
@@ -358,8 +370,19 @@ class StreamCore extends EventEmitter {
     handleVideoFrame(videoFrame) {
 
         this._yuvframerate++;
+
+        if (!this._faceDetector) {
+
+            this.emit('yuvData', videoFrame.data, videoFrame.width, videoFrame.height, videoFrame.pts);
+
+        } else {
+
+            let facesYUV = this._faceDetector.detect(videoFrame);
+            this.emit('yuvData', facesYUV, videoFrame.width, videoFrame.height, videoFrame.pts);
+        }
+
+     
     
-        this.emit('yuvData', videoFrame.data, videoFrame.width, videoFrame.height, videoFrame.pts);
     }
 
     handleAudioCodecInfo(audioCodeInfo) {
