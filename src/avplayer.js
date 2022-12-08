@@ -1,8 +1,7 @@
-import CanvasRender from './render/canvasrender.js';
+
 import Logger from './utils/logger.js';
-import MediaCenter from './mediacenter/index.js';
-import { PixelType } from './constant/index.js';
-import AudioPlayer from './audio/audioplayer.js';
+import MediaCenterWorker from './mediacenter/mediacenter_worker.js';
+import MediaCenter from './mediacenter/mediacenter.js';
 import EventEmitter from 'eventemitter3';
 
 const DEFAULT_PLAYER_OPTIONS = {
@@ -20,17 +19,20 @@ const DEFAULT_PLAYER_OPTIONS = {
     retryCnt:-1,       //拉流失败重试次数
     retryDelay: 5,     //重试时延 5000
 
-    decoderMode:"normal"
+    useWorker:false,
+
+    decoderMode:"normal",
+    faceDetectMode:"off",
+    faceDetectWidth:192,
 }
 
 class AVPlayer extends EventEmitter{
 
     _options = undefined;
 
-    _render = undefined;
+
     _logger = undefined;
     _mediacenter = undefined;
-    _audioplayer = undefined;
 
 
     //统计
@@ -38,6 +40,7 @@ class AVPlayer extends EventEmitter{
     _yuvbitrate = 0;
     _pcmframerate = 0;
     _pcmbitrate = 0;
+
     _statsec = 2;
     _stattimer = undefined;
     _lastStatTs = undefined;
@@ -47,18 +50,14 @@ class AVPlayer extends EventEmitter{
         super();
 
         this._logger = new Logger();
-      //  this._logger.setLogEnable(true);
+        this._logger.setLogEnable(true);
 
         this._options = Object.assign({}, DEFAULT_PLAYER_OPTIONS, options);
         this._container = options.container;
 
         this._logger.info('player', `now play ${this._options.url}`);
 
-        this._mediacenter = new MediaCenter(this); //jitterbuffer & decoder h264/h265 -> yuv aac/pcmu/pcma -> fltp
-        this._render = new CanvasRender(this);  // render yuv
-        this._audioplayer = new AudioPlayer(this); // play fltp
 
-        this.registerEvents();
         this.startStatisc();
     }
     
@@ -99,13 +98,21 @@ class AVPlayer extends EventEmitter{
 
     }
 
-    registerEvents() {
+    useWorker() {
 
-        this._mediacenter.on('inited', () => {
+        this._options.useWorker = true;
+    }
 
-            this._logger.info('player', `mediacenter init success`);
-     
-        })
+
+    start() {
+
+        if (this._options.useWorker) {
+
+            this._mediacenter = new MediaCenterWorker(this); 
+        } else {
+            this._mediacenter = new MediaCenter(this); 
+        }
+
 
         this._mediacenter.on('videoinfo', (vtype, width, height) => {
 
@@ -121,15 +128,13 @@ class AVPlayer extends EventEmitter{
             this._yuvbitrate += yuvpacket.data.length;
        //     this._logger.info('player', `decoder yuvdata ${yuvpacket.data.length} ts ${yuvpacket.timestamp} width:${yuvpacket.width} height:${yuvpacket.height}`);
 
-            this._render.updateTexture(PixelType.YUV, yuvpacket.data, yuvpacket.width, yuvpacket.height);
+            
         })
 
         this._mediacenter.on('audioinfo', (atype, sampleRate, channels, samplesPerPacket) => {
 
             this._logger.info('player', `mediacenter audio info atype ${atype} sampleRate ${sampleRate} channels ${channels}  samplesPerPacket ${samplesPerPacket}`);
             
-            this._audioplayer.setAudioInfo(atype, sampleRate, channels, samplesPerPacket);
-
             this.emit('audioinfo', atype, sampleRate, channels);
             
         })
@@ -144,8 +149,6 @@ class AVPlayer extends EventEmitter{
             }
        //     this._logger.info('player', `decoder yuvdata ${yuvpacket.data.length} ts ${yuvpacket.timestamp} width:${yuvpacket.width} height:${yuvpacket.height}`);
 
-            this._audioplayer.pushPcmData(pcmpacket);
-            
         })
 
     }
@@ -155,8 +158,6 @@ class AVPlayer extends EventEmitter{
         this.stopStatic()
 
         this._mediacenter.destroy();
-        this._audioplayer.destroy();
-        this._render.destroy();
 
         this._logger.info('player', `avplayer destroy`)
 
@@ -166,17 +167,17 @@ class AVPlayer extends EventEmitter{
 
     unMute() {
 
-        this._audioplayer.unMute();
+        this._mediacenter.unMute();
     }
 
     mute() {
 
-        this._audioplayer.mute();
+        this._mediacenter.mute();
     }
 
     switchRender(renderMode) {
 
-        this._render.switchRender(renderMode);
+        this._mediacenter.switchRender(renderMode);
 
     }
 

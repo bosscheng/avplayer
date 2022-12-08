@@ -17,22 +17,34 @@
             <option value="green">绿幕抠图</option>
             <option value="cube">立方体</option>
         </select>
+        <select id="facedetectmode">
+            <option value="soft-simd">开启人脸检测(opencv+simd)</option>
+            <option value="soft-simd-mt">开启人脸检测(opencv+simd+threads)</option>
+            <option value="off">关闭人脸检测</option>
+            <option value="soft">开启人脸检测(opencv)</option>
+        </select>
+        <input id="facedetectwidth" type="text" style="width: 40px;"value="192" />
         <select id="decodermode">
-            <option value="simd">SIMD-LibHevc解码</option>
-            <option value="simd_2">SIMD-OpenHevc解码</option>
-            <option value="simd_1">SIMD-BDE解码</option>
-            <option value="normal">正常解码</option>
+            <option value="soft-simd">SIMD解码</option>
+            <option value="soft">正常解码</option>
         </select>
         <select id="playmode">
             <option value="playback">录像流</option>
             <option value="live">实时流</option>
         </select>
+        <select id="workermode">
+            <option value="1">使用worker</option>
+            <option value="0">单线程</option>
+        </select>
+        <input id="address" type="text" style="width: 300px;"value="http://192.168.6.18:8080/live/a123456.flv" />
         <!-- <input id="address" type="text" style="width: 300px;"value="https://ks3-cn-beijing.ksyun.com/ksplayer/h265/outside_demo/v1.1.3/720P2M30fpsh265-wasmtest.flv" /> -->
         <!-- <input id="address" type="text" style="width: 300px;"value="https://flv.bdplay.nodemedia.cn/live/bbb_265.flv" /> -->
         <!-- <input id="address" type="text" style="width: 300px;"value="http://192.168.6.18:8080/live/a123456.flv" /> -->
         <!-- <input id="address" type="text" style="width: 300px;"value="http://172.105.18.200:2080/live/test121.live.flv" /> -->
-        <input id="address" type="text" style="width: 300px;"value="http://172.105.18.200:2080/live/test2652k.live.flv" />
+        <!-- <input id="address" type="text" style="width: 300px;"value="http://172.105.18.200:2080/live/test2652k.live.flv" /> -->
         <!-- <input id="address" type="text" style="width: 300px;"value="http://182.92.106.226/live/test.flv" /> -->
+        <!-- <input id="address" type="text" style="width: 300px;"value="http://car-eye.cn:8064/live/34020000001310000036.34020000001110000002.flv" /> -->
+        
 
 
         <button id="play" type="button">播放</button>
@@ -67,16 +79,19 @@ function main() {
     let addrinput = document.getElementById("address");
     let decoderCtrl = document.getElementById("decodermode");
     let playCtrl = document.getElementById("playmode");
+    let workerCtrl = document.getElementById("workermode");
     let fpslabel = document.getElementById("fps");
     let videolabel = document.getElementById("video");
     let audiolabel = document.getElementById("audio");
+    let faceDetectCtrl= document.getElementById("facedetectmode");
+    let faceDetectWidthCtrl= document.getElementById("facedetectwidth");
 
 
     let player = undefined;
     
     document.getElementById("play").onclick = () => {
 
-        console.log(`play btn click rendmode ${selectCtrl.options[selectCtrl.options.selectedIndex].value} decoderMode ${decoderCtrl.options[decoderCtrl.options.selectedIndex].value} playMode ${playCtrl.options[playCtrl.options.selectedIndex].value}`);
+        console.log(`play btn click rendmode ${selectCtrl.options[selectCtrl.options.selectedIndex].value} decoderMode ${decoderCtrl.options[decoderCtrl.options.selectedIndex].value} playMode ${playCtrl.options[playCtrl.options.selectedIndex].value} faceDetectMode ${faceDetectCtrl.options[faceDetectCtrl.options.selectedIndex].value}`);
 
      //  document.getElementById("video").play();
 
@@ -96,6 +111,8 @@ function main() {
             renderMode:selectCtrl.options[selectCtrl.options.selectedIndex].value,
             decoderMode:decoderCtrl.options[decoderCtrl.options.selectedIndex].value,
             playMode:playCtrl.options[playCtrl.options.selectedIndex].value,
+            faceDetectMode:faceDetectCtrl.options[faceDetectCtrl.options.selectedIndex].value,
+            faceDetectWidth:parseInt(faceDetectWidthCtrl.value),
             retryCnt:0
 
         };
@@ -116,16 +133,24 @@ function main() {
 
             let acodec = 'PCM';
 
-            if (atype === 2) {
+            if (atype === 1) {
                 acodec = 'PCMA';
-            } else if (atype === 4) {
+            } else if (atype === 2) {
                 acodec = 'PCMU';
-            } else if (atype === 8) {
+            } else if (atype === 4) {
                 acodec = 'AAC';
             }
 
             audiolabel.innerText = `AudioCodec: ${acodec} SampleRate: ${sampleRate} Channels: ${channels}`;
         })
+
+
+       if (workerCtrl.options[workerCtrl.options.selectedIndex].value == "1") {
+
+            player.useWorker();
+       } 
+
+        player.start();
 
     };
 

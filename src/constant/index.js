@@ -16,10 +16,9 @@
 
 const AudioType = {
 
-    PCM:   0x1,
-    PCMA:  0x2,
-    PCMU:  0x4,
-    AAC:   0x8
+    PCMA:  0x1,
+    PCMU:  0x2,
+    AAC:   0x4
 
 };
 
@@ -61,7 +60,6 @@ const WORKER_SEND_TYPE = {
 const WORKER_EVENT_TYPE = {
     created:'created',
     inited:'inited',
-    reseted: 'reseted',
     destroyed: 'destroyed',
     videoInfo: 'videoInfo',
     yuvData: 'yuvData',
