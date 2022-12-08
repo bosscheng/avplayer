@@ -28,6 +28,17 @@ export class FaceDetectorBase extends EventEmitter {
         return this.state;
     }
 
+    setDetectWidth(detectWidth) {
+
+        if (this.state !== 'initialized') {
+            console.warn(`the detector not initialized`);
+            return;
+        }
+
+
+        this.detector.setDetectWidth(detectWidth);
+    }
+
     detect(frame) {
         if (this.state !== 'initialized') {
             console.warn(`the detector not initialized`);

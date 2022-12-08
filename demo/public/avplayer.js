@@ -18114,6 +18114,15 @@ void main(void) {
         return this.state;
       }
 
+      setDetectWidth(detectWidth) {
+        if (this.state !== 'initialized') {
+          console.warn(`the detector not initialized`);
+          return;
+        }
+
+        this.detector.setDetectWidth(detectWidth);
+      }
+
       detect(frame) {
         if (this.state !== 'initialized') {
           console.warn(`the detector not initialized`);
@@ -23863,27 +23872,27 @@ void main(void) {
           "q": __embind_register_bool,
           "F": __embind_register_class,
           "z": __embind_register_class_constructor,
-          "k": __embind_register_class_function,
+          "f": __embind_register_class_function,
           "E": __embind_register_emval,
-          "j": __embind_register_float,
+          "k": __embind_register_float,
           "b": __embind_register_integer,
           "a": __embind_register_memory_view,
           "o": __embind_register_std_string,
-          "i": __embind_register_std_wstring,
+          "j": __embind_register_std_wstring,
           "r": __embind_register_void,
           "C": __emscripten_date_now,
           "B": __emscripten_get_now_is_monotonic,
           "p": __emval_decref,
-          "f": _abort,
+          "g": _abort,
           "A": _emscripten_get_now,
           "D": _emscripten_memcpy_big,
           "v": _emscripten_resize_heap,
           "w": _environ_get,
           "x": _environ_sizes_get,
-          "h": _fd_close,
+          "i": _fd_close,
           "l": _fd_read,
           "s": _fd_seek,
-          "g": _fd_write,
+          "h": _fd_write,
           "e": _setTempRet0,
           "u": _strftime_l
         };
@@ -29758,27 +29767,27 @@ void main(void) {
           "q": __embind_register_bool,
           "F": __embind_register_class,
           "z": __embind_register_class_constructor,
-          "k": __embind_register_class_function,
+          "f": __embind_register_class_function,
           "E": __embind_register_emval,
-          "j": __embind_register_float,
+          "k": __embind_register_float,
           "b": __embind_register_integer,
           "a": __embind_register_memory_view,
           "o": __embind_register_std_string,
-          "i": __embind_register_std_wstring,
+          "j": __embind_register_std_wstring,
           "r": __embind_register_void,
           "C": __emscripten_date_now,
           "B": __emscripten_get_now_is_monotonic,
           "p": __emval_decref,
-          "f": _abort,
+          "g": _abort,
           "A": _emscripten_get_now,
           "D": _emscripten_memcpy_big,
           "v": _emscripten_resize_heap,
           "w": _environ_get,
           "x": _environ_sizes_get,
-          "h": _fd_close,
+          "i": _fd_close,
           "l": _fd_read,
           "s": _fd_seek,
-          "g": _fd_write,
+          "h": _fd_write,
           "e": _setTempRet0,
           "u": _strftime_l
         };
@@ -36212,7 +36221,7 @@ void main(void) {
           "f": ___cxa_allocate_exception,
           "e": ___cxa_throw,
           "G": ___emscripten_init_main_thread_js,
-          "m": ___emscripten_thread_cleanup,
+          "n": ___emscripten_thread_cleanup,
           "D": ___pthread_create_js,
           "r": ___syscall_fcntl64,
           "L": ___syscall_ioctl,
@@ -36221,13 +36230,13 @@ void main(void) {
           "u": __embind_register_bool,
           "S": __embind_register_class,
           "N": __embind_register_class_constructor,
-          "o": __embind_register_class_function,
+          "i": __embind_register_class_function,
           "R": __embind_register_emval,
-          "l": __embind_register_float,
+          "m": __embind_register_float,
           "c": __embind_register_integer,
           "b": __embind_register_memory_view,
           "s": __embind_register_std_string,
-          "k": __embind_register_std_wstring,
+          "l": __embind_register_std_wstring,
           "v": __embind_register_void,
           "Q": __emscripten_date_now,
           "E": __emscripten_default_pthread_stack_size,
@@ -36236,7 +36245,7 @@ void main(void) {
           "I": __emscripten_set_offscreencanvas_size,
           "t": __emval_decref,
           "h": _abort,
-          "n": _emscripten_check_blocking_allowed,
+          "o": _emscripten_check_blocking_allowed,
           "A": _emscripten_get_heap_max,
           "d": _emscripten_get_now,
           "M": _emscripten_memcpy_big,
@@ -36247,10 +36256,10 @@ void main(void) {
           "J": _environ_get,
           "K": _environ_sizes_get,
           "C": _exit,
-          "j": _fd_close,
+          "k": _fd_close,
           "p": _fd_read,
           "w": _fd_seek,
-          "i": _fd_write,
+          "j": _fd_write,
           "a": wasmMemory || Module["wasmMemory"],
           "g": _setTempRet0,
           "y": _strftime_l
@@ -36521,6 +36530,10 @@ void main(void) {
         return this.detector.state();
       }
 
+      setDetectWidth(detectWidth) {
+        this.detector.setDetectWidth(detectWidth);
+      }
+
       detect(frame) {
         return this.detector.detect(frame);
       }
@@ -36629,6 +36642,8 @@ void main(void) {
           if (this._player._options.faceDetectMode != "off") {
             this._faceDetector = new FaceDetector(this._player._options.faceDetectMode);
             await this._faceDetector.initialize();
+
+            this._faceDetector.setDetectWidth(this._player._options.faceDetectWidth);
           }
         }
       }
@@ -36985,7 +37000,8 @@ void main(void) {
       //重试时延 5000
       useWorker: false,
       decoderMode: "normal",
-      faceDetectMode: "off"
+      faceDetectMode: "off",
+      faceDetectWidth: 192
     };
 
     class AVPlayer extends eventemitter3 {

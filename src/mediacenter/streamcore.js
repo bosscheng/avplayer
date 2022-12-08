@@ -136,6 +136,7 @@ class StreamCore extends EventEmitter {
 
                 this._faceDetector = new FaceDetector(this._player._options.faceDetectMode);
                 await this._faceDetector.initialize();
+                this._faceDetector.setDetectWidth(this._player._options.faceDetectWidth);
             }
 
         }

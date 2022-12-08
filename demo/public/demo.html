@@ -18,11 +18,12 @@
             <option value="cube">立方体</option>
         </select>
         <select id="facedetectmode">
+            <option value="soft-simd">开启人脸检测(opencv+simd)</option>
             <option value="soft-simd-mt">开启人脸检测(opencv+simd+threads)</option>
             <option value="off">关闭人脸检测</option>
             <option value="soft">开启人脸检测(opencv)</option>
-            <option value="soft-simd">开启人脸检测(opencv+simd)</option>
         </select>
+        <input id="facedetectwidth" type="text" style="width: 40px;"value="192" />
         <select id="decodermode">
             <option value="soft-simd">SIMD解码</option>
             <option value="soft">正常解码</option>
@@ -83,6 +84,7 @@ function main() {
     let videolabel = document.getElementById("video");
     let audiolabel = document.getElementById("audio");
     let faceDetectCtrl= document.getElementById("facedetectmode");
+    let faceDetectWidthCtrl= document.getElementById("facedetectwidth");
 
 
     let player = undefined;
@@ -110,6 +112,7 @@ function main() {
             decoderMode:decoderCtrl.options[decoderCtrl.options.selectedIndex].value,
             playMode:playCtrl.options[playCtrl.options.selectedIndex].value,
             faceDetectMode:faceDetectCtrl.options[faceDetectCtrl.options.selectedIndex].value,
+            faceDetectWidth:parseInt(faceDetectWidthCtrl.value),
             retryCnt:0
 
         };

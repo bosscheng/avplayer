@@ -26,8 +26,14 @@ export class FaceDetector extends EventEmitter {
     initialize() {
         return this.detector.initialize();
     }
+    
     state() {
         return this.detector.state();
+    }
+
+    setDetectWidth(detectWidth) {
+
+        this.detector.setDetectWidth(detectWidth);
     }
 
     detect(frame) {
